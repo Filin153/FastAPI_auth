@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Load requirements
         run: |
-          python -v venv venv
+          python -m venv venv
           source /venv/bin/activate
           pip install -r requirements_dev.txt
       - name: Test
