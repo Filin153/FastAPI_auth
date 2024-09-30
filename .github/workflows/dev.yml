@@ -3,7 +3,7 @@ name: Test FastAPI_auth
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "dev", "main"]
 
 jobs:
   Build_and_Test_FastAPI_auth:
