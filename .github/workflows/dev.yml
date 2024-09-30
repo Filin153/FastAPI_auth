@@ -1,0 +1,25 @@
+name: Test FastAPI_auth
+
+
+on:
+  push:
+    branches: [ "dev" ]
+
+jobs:
+  Build_and_Test_FastAPI_auth:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5.2.0
+        with:
+          python-version: 3.10
+      - uses: actions/checkout@v4
+      - name: Load requirements
+        run: |
+          python -v venv venv
+          source /venv/bin/activate
+          pip install -r requirements_dev.txt
+      - name: Test
+        run: pytest -v
+          
+      
