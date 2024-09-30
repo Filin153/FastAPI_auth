@@ -1,0 +1,8 @@
+passlib[bcrypt]
+fastapi[all]
+sqlalchemy
+pyjwt
+
+pytest
+pytest-asyncio
+httpx
