@@ -53,7 +53,7 @@ def test_get_current_user_via_header(test_client):
 
     # Используем токен для запроса данных текущего пользователя
     response = test_client.get(
-        "/me/head",
+        "/login/head",
         headers={"Authorization": f"Bearer {token}"}
     )
 
@@ -86,7 +86,7 @@ def test_get_current_user_via_cookie(test_client):
 def test_get_current_user_invalid_token_via_header(test_client):
     invalid_token = "invalidtoken"
     response = test_client.get(
-        "/me/head",
+        "/login/head",
         headers={"Authorization": f"Bearer {invalid_token}"}
     )
     assert response.status_code == 401
@@ -101,7 +101,7 @@ def test_get_current_user_invalid_token_via_cookie(test_client):
     test_client.cookies.set("access_token", f"Bearer {invalid_token}")
 
     # Выполняем запрос с некорректными куки
-    response = test_client.get("/me/cookie")
+    response = test_client.get("/login/cookie")
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Could not validate credentials"}

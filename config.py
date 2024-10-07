@@ -1,4 +1,4 @@
-from FastAPI_auth.coder import JWTAuth, Hash
+from FastAPI_auth.coder import Hash
 
 
 class FakeDB:
@@ -15,6 +15,3 @@ class FakeDB:
             user.password = self.users[username]['password']
             return user
         return None
-
-
-jwt_auth = JWTAuth("qweasdqwe", database=[FakeDB(), "get"])
