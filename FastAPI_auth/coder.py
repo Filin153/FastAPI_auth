@@ -1,6 +1,6 @@
 from .excepts import *  # Импорт исключений из вашего проекта (предположительно, кастомные исключения)
 from datetime import datetime, timedelta, timezone  # Импорт для работы с временными метками и зонами
-from typing import Annotated  # Импорт Annotated для добавления аннотаций типов
+from typing import Annotated, Any  # Импорт Annotated для добавления аннотаций типов
 import jwt  # Импорт библиотеки JWT для работы с токенами
 from fastapi import Depends, HTTPException, Request  # Импорт FastAPI зависимостей и исключений
 from fastapi.security import OAuth2PasswordBearer  # Импорт механизма аутентификации по схеме OAuth2 с Bearer токенами
@@ -64,7 +64,7 @@ class JWTAuth(Hash):
         self.algorithm = algorithm  # Алгоритм подписи JWT
 
     # Метод для аутентификации пользователя
-    async def auth_user(self, filters: dict, password: str) -> User:
+    async def auth_user(self, filters: dict, password: str) -> Any:
         """
         :param filters: словарь для фильтрации пользователя в базе данных, пример: {'username': 'goose'}
         :param password: пароль пользователя

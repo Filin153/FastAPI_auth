@@ -2,7 +2,8 @@ import pytest
 import jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException
-from FastAPI_auth.coder import JWTAuth, Hash, UserNotFound, IncorrectPassword, DatabaseObjectNoGetMethod
+from FastAPI_auth.coder import Hash, UserNotFound, IncorrectPassword, DatabaseObjectNoGetMethod, JWTAuth
+from FastAPI_auth.jwt_auth import Auth
 
 
 # Фиктивная база данных и пользователь
@@ -12,7 +13,7 @@ class FakeDB:
             'testuser': {'password': CryptContext(schemes=['bcrypt']).hash('testpassword')}
         }
 
-    def get_user(self, filters: dict):
+    async def get_user(self, filters: dict):
         username = filters.get('username')
         if username in self.users:
             user = type('User', (), {})()  # Создаем объект User динамически
@@ -25,7 +26,7 @@ class FakeDB:
 # Создание JWTAuth объекта с фиктивной базой данных
 @pytest.fixture
 def jwt_auth():
-    return JWTAuth(secret_key="testsecret", database=[FakeDB(), 'get_user'])
+    return Auth(secret_key="testsecret", database=[FakeDB(), 'get_user'])
 
 
 # Тестирование асинхронного хеширования пароля
@@ -76,7 +77,7 @@ async def test_get_current_user(jwt_auth):
     filters = {'username': 'testuser'}
     token = await jwt_auth.create_token(token_data=token_data, filter_data=filters, expires_delta=30)
 
-    user = await jwt_auth.get_current_user(token)
+    user = await jwt_auth.get_current_user_header(token)
     assert user.username == 'testuser'
 
 
@@ -85,7 +86,7 @@ async def test_get_current_user(jwt_auth):
 async def test_get_current_user_invalid_token(jwt_auth):
     invalid_token = "invalidtoken"
     with pytest.raises(HTTPException):
-        await jwt_auth.get_current_user(invalid_token)
+        await jwt_auth.get_current_user_header(invalid_token)
 
 
 # Тестирование ошибки, если в базе данных нет метода get

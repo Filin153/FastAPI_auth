@@ -75,7 +75,7 @@ def test_get_current_user_via_cookie(test_client):
     test_client.cookies.set("access_token", f"Bearer {token}")
 
     # Используем куки для запроса данных текущего пользователя
-    response = test_client.get("/me/cookie")
+    response = test_client.get("/login/cookie")
 
     assert response.status_code == 200
     assert "username" in response.json()

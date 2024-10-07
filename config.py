@@ -7,7 +7,7 @@ class FakeDB:
             'testuser': {'password': Hash.pwd_context.hash('testpassword')}
         }
 
-    def get(self, filters: dict) -> dict | None:
+    async def get(self, filters: dict) -> dict | None:
         username = filters.get('username')
         if username in self.users:
             user = type('User', (), {})()  # Создаем объект User динамически

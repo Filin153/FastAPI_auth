@@ -2,7 +2,7 @@ from FastAPI_auth.schemas import Token  # Импорт схемы Token, кот�
 from fastapi import APIRouter, Depends, HTTPException, Response  # Импорт необходимых классов FastAPI
 from fastapi.security import OAuth2PasswordRequestForm  # Импорт формы для получения данных (логин и пароль) через OAuth2
 from typing import Annotated, Any  # Импорт для аннотаций типов
-from jwt_auth import Auth
+from .jwt_auth import Auth
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter()
