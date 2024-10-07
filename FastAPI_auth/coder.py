@@ -1,6 +1,6 @@
-from FastAPI_auth.excepts import *  # Импорт исключений из вашего проекта (предположительно, кастомные исключения)
+from .excepts import *  # Импорт исключений из вашего проекта (предположительно, кастомные исключения)
 from datetime import datetime, timedelta, timezone  # Импорт для работы с временными метками и зонами
-from typing import Annotated  # Импорт Annotated для добавления аннотаций типов
+from typing import Annotated, Any  # Импорт Annotated для добавления аннотаций типов
 import jwt  # Импорт библиотеки JWT для работы с токенами
 from fastapi import Depends, HTTPException, Request  # Импорт FastAPI зависимостей и исключений
 from fastapi.security import OAuth2PasswordBearer  # Импорт механизма аутентификации по схеме OAuth2 с Bearer токенами
@@ -64,13 +64,13 @@ class JWTAuth(Hash):
         self.algorithm = algorithm  # Алгоритм подписи JWT
 
     # Метод для аутентификации пользователя
-    async def auth_user(self, filters: dict, password: str) -> bool:
+    async def auth_user(self, filters: dict, password: str) -> Any:
         """
         :param filters: словарь для фильтрации пользователя в базе данных, пример: {'username': 'goose'}
         :param password: пароль пользователя
         :return: объект пользователя, если аутентификация успешна, иначе исключение
         """
-        user = self.get_user(filters)  # Получаем пользователя по фильтрам
+        user = await self.get_user(filters)  # Получаем пользователя по фильтрам
         if not user:
             raise UserNotFound()  # Если пользователь не найден, бросаем исключение
         if not await self.verify_password(password, user.password):  # Проверяем пароль
@@ -96,7 +96,7 @@ class JWTAuth(Hash):
         return encoded_jwt  # Возвращаем закодированный токен
 
     # Метод для получения текущего пользователя по токену из заголовка
-    async def get_current_user(self, token: Annotated[str, Depends(oauth2_scheme)]):
+    async def get_current_user_header(self, access_token: Annotated[str, Depends(oauth2_scheme)]):
         credentials_exception = HTTPException(
             status_code=401,
             detail="Could not validate credentials",
@@ -104,14 +104,14 @@ class JWTAuth(Hash):
         )
         try:
             # Расшифровываем токен и извлекаем данные
-            payload: dict = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            payload: dict = jwt.decode(access_token, self.secret_key, algorithms=[self.algorithm])
             filters: str = payload.get("filters")  # Извлекаем фильтры пользователя из токена
             if filters is None:
                 raise credentials_exception  # Если фильтры отсутствуют, выбрасываем исключение
             token_data = {key: val for key, val in payload.items()}  # Собираем данные токена
         except InvalidTokenError:
             raise credentials_exception  # Если токен недействителен, выбрасываем исключение
-        user = self.get_user(token_data['filters'])  # Получаем пользователя по фильтрам
+        user = await self.get_user(token_data['filters'])  # Получаем пользователя по фильтрам
         if user is None:
             raise credentials_exception  # Если пользователь не найден, выбрасываем исключение
         return user  # Возвращаем объект пользователя
@@ -139,7 +139,7 @@ class JWTAuth(Hash):
             token_data = {key: val for key, val in payload.items()}  # Собираем данные токена
         except InvalidTokenError:
             raise credentials_exception  # Если токен недействителен, выбрасываем исключение
-        user = self.get_user(token_data['filters'])  # Получаем пользователя по фильтрам
+        user = await self.get_user(token_data['filters'])  # Получаем пользователя по фильтрам
         if user is None:
             raise credentials_exception  # Если пользователь не найден, выбрасываем исключение
         return user  # Возвращаем объект пользователя

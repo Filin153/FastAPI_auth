@@ -2,7 +2,7 @@ from FastAPI_auth.schemas import Token  # Импорт схемы Token, кот�
 from fastapi import APIRouter, Depends, HTTPException, Response  # Импорт необходимых классов FastAPI
 from fastapi.security import OAuth2PasswordRequestForm  # Импорт формы для получения данных (логин и пароль) через OAuth2
 from typing import Annotated, Any  # Импорт для аннотаций типов
-from config import jwt_auth  # Импорт объекта jwt_auth, который отвечает за аутентификацию через JWT
+from .jwt_auth import Auth
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter()
@@ -18,7 +18,7 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
     """
     try:
         # Аутентификация пользователя по имени пользователя и паролю
-        user = await jwt_auth.auth_user({"username": form_data.username}, form_data.password)
+        user = await Auth.jwt_auth.auth_user({"username": form_data.username}, form_data.password)
         if not user:
             # Если пользователь не найден или пароль неверный, возвращаем HTTP-исключение с кодом 401
             raise HTTPException(
@@ -28,7 +28,7 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
             )
 
         # Генерация JWT токена для аутентифицированного пользователя
-        access_token = await jwt_auth.create_token(
+        access_token = await Auth.jwt_auth.create_token(
             token_data={"some_key": "some_value"},  # Дополнительные данные в токен (при необходимости)
             filter_data={'username': user.username}  # Используем имя пользователя для фильтрации
         )
@@ -44,8 +44,8 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 
 
 # GET-запрос для получения данных текущего пользователя через заголовок Authorization
-@router.get("/me/head")
-async def me_head(current_user: Annotated[Any, Depends(jwt_auth.get_current_user)]):
+@router.get("/login/head")
+async def me_head(current_user: Auth.auth_header):
     """
     Функция для получения текущего пользователя по токену из заголовка Authorization.
     :param current_user: объект текущего пользователя, извлеченный из JWT токена
@@ -54,8 +54,8 @@ async def me_head(current_user: Annotated[Any, Depends(jwt_auth.get_current_user
     return current_user  # Возвращаем объект пользователя (в зависимости от реализации это может быть JSON с данными)
 
 # GET-запрос для получения данных текущего пользователя через куки
-@router.get("/me/cookie")
-async def me_cookie(current_user: Annotated[Any, Depends(jwt_auth.get_current_user_cookie)]):
+@router.get("/login/cookie")
+async def me_cookie(current_user: Auth.auth_cookie):
     """
     Функция для получения текущего пользователя по токену, сохраненному в куки.
     :param current_user: объект текущего пользователя, извлеченный из JWT токена, который хранится в куки
