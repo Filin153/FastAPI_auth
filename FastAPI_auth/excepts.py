@@ -13,6 +13,19 @@ class DatabaseObjectNoGetMethod(Exception):
 
         # В остальных случаях выбрасывается обычное исключение с соответствующим сообщением
         super().__init__("Database object has no get method")
+        
+# Класс исключения, выбрасываемого при отсутствии метода "get" в объекте базы данных
+class DatabaseObjectNoSetTotpMethod(Exception):
+    def __init__(self, http: bool = False):
+        """
+        :param http: Если True, генерируется HTTPException для обработки в FastAPI, иначе обычное исключение.
+        """
+        if http:
+            # Если параметр http=True, выбрасывается HTTPException с кодом 500 (внутренняя ошибка сервера)
+            raise HTTPException(status_code=500, detail="Database object has no set_totp method")
+
+        # В остальных случаях выбрасывается обычное исключение с соответствующим сообщением
+        super().__init__("Database object has no set_totp method")
 
 
 # Класс исключения, выбрасываемого, если пользователь не найден
