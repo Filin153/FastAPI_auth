@@ -14,17 +14,24 @@ tokenUrl = "/token"
 
 class TwoFAuth:
     # Метод для генерации нового секретного ключа для TOTP
-    def get_new_totp_secret_key(self):
+    async def get_new_totp_secret_key(self):
         secret_key = pyotp.random_base32()  # Генерация случайного секретного ключа
         return secret_key
 
     # Метод для получения текущего TOTP-кода на основе секретного ключа
-    def get_totp_code(self, secret_key: str):
+    async def get_totp_code(self, secret_key: str):
         return pyotp.TOTP(secret_key).now()  # Генерация текущего одноразового пароля на основе ключа
-
+    
+    async def get_totp_url(self, secret_key: str, name: str):
+        return pyotp.totp.TOTP(secret_key).provisioning_uri(
+            name=name,  # Имя пользователя, которое будет отображаться в приложении 2FA
+            issuer_name='Goose App'  # Название приложения или сервиса, который использует 2FA
+        )
+    
     # Метод для верификации TOTP-кода, введённого пользователем
-    def verify_totp_code(self, secret_key: str, user_code: str) -> bool:
-        if self.get_totp_code(secret_key) != user_code:  # Сравнение с текущим сгенерированным кодом
+    async def verify_totp_code(self, secret_key: str, user_code: str) -> bool:
+        totp = pyotp.TOTP(secret_key)
+        if totp.verify(user_code):  # Сравнение с текущим сгенерированным кодом
             raise Exception("No auth TOTP")  # Выбрасывание исключения в случае несовпадения
         return True  # Возвращаем True, если код верный
 
@@ -97,7 +104,7 @@ class JWTAuth(Hash, TwoFAuth):
 
         if totp_key is not None:
             # Если передан TOTP ключ, проверяем код двухфакторной аутентификации
-            self.verify_totp_code(user.totp_secret, totp_key)
+            await self.verify_totp_code(user.totp_secret, totp_key)
 
         return user  # Возвращаем объект пользователя
 
