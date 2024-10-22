@@ -43,6 +43,44 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
         raise HTTPException(status_code=401, detail=str(e))
 
 
+@router.post("/totp")
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+    try:
+        # Аутентификация пользователя по имени пользователя и паролю
+        # Мы вызываем метод 'auth_user', который проверяет существование пользователя и правильность пароля
+        # Если имя пользователя и пароль не совпадают с хранящимися данными, метод возвращает None
+        user = await Auth.jwt_auth.auth_user({"username": form_data.username}, form_data.password)
+
+        if not user:
+            # Если пользователь не найден или пароль неверный, вызываем HTTP-исключение с кодом 401 (Unauthorized)
+            # Сообщение в 'detail' указывает, что имя пользователя или пароль некорректны
+            raise HTTPException(
+                status_code=401,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Генерация нового TOTP секретного ключа для пользователя
+        # Этот ключ используется для последующей генерации одноразовых паролей
+        totp_token = await Auth.jwt_auth.get_new_totp_secret_key()
+
+        # В реальном приложении этот сгенерированный ключ totp_token необходимо сохранить в базе данных
+        # для пользователя, чтобы он мог использовать его для двухфакторной аутентификации.
+        # Предполагается, что здесь будет запрос в БД на сохранение totp_token.
+
+        # Использование pyotp для создания URL для конфигурации двухфакторной аутентификации
+        # 'provisioning_uri' создаёт специальный URL для добавления в приложения вроде Google Authenticator
+        # Пользователь сканирует этот QR-код или вводит данные вручную в своё приложение 2FA
+        return pyotp.totp.TOTP('JBSWY3DPEHPK3PXP').provisioning_uri(
+            name=form_data.username,  # Имя пользователя, которое будет отображаться в приложении 2FA
+            issuer_name='Goose App'  # Название приложения или сервиса, который использует 2FA
+        )
+    except Exception as e:
+        # Обработка исключений. Если возникает ошибка, возвращается исключение HTTP с кодом 401 (Unauthorized)
+        # и описание ошибки передаётся в качестве 'detail'
+        raise HTTPException(status_code=401, detail=str(e))
+
+
 # GET-запрос для получения данных текущего пользователя через заголовок Authorization
 @router.get("/login/head")
 async def me_head(current_user: Auth.auth_header):

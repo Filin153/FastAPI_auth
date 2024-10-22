@@ -1,15 +1,32 @@
-from .excepts import *  # Импорт исключений из вашего проекта (предположительно, кастомные исключения)
-from datetime import datetime, timedelta, timezone  # Импорт для работы с временными метками и зонами
-from typing import Annotated, Any  # Импорт Annotated для добавления аннотаций типов
-import jwt  # Импорт библиотеки JWT для работы с токенами
-from fastapi import Depends, HTTPException, Request  # Импорт FastAPI зависимостей и исключений
-from fastapi.security import OAuth2PasswordBearer  # Импорт механизма аутентификации по схеме OAuth2 с Bearer токенами
-from jwt.exceptions import InvalidTokenError  # Импорт исключений для обработки ошибок токенов JWT
-from passlib.context import CryptContext  # Импорт Passlib для хеширования и проверки паролей
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, Any
+import jwt
+import pyotp
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer
+from jwt.exceptions import InvalidTokenError
+from passlib.context import CryptContext
+from .excepts import *
 
 # URL для получения токена
 tokenUrl = "/token"
 
+
+class TwoFAuth:
+    # Метод для генерации нового секретного ключа для TOTP
+    def get_new_totp_secret_key(self):
+        secret_key = pyotp.random_base32()  # Генерация случайного секретного ключа
+        return secret_key
+
+    # Метод для получения текущего TOTP-кода на основе секретного ключа
+    def get_totp_code(self, secret_key: str):
+        return pyotp.TOTP(secret_key).now()  # Генерация текущего одноразового пароля на основе ключа
+
+    # Метод для верификации TOTP-кода, введённого пользователем
+    def verify_totp_code(self, secret_key: str, user_code: str) -> bool:
+        if self.get_totp_code(secret_key) != user_code:  # Сравнение с текущим сгенерированным кодом
+            raise Exception("No auth TOTP")  # Выбрасывание исключения в случае несовпадения
+        return True  # Возвращаем True, если код верный
 
 # Класс для работы с хешированием паролей
 class Hash:
@@ -39,7 +56,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=tokenUrl)
 
 
 # Класс для работы с JWT аутентификацией и хешированием паролей, наследуется от класса Hash
-class JWTAuth(Hash):
+class JWTAuth(Hash, TwoFAuth):
     _instance = None  # Для реализации паттерна Singleton
 
     # Метод для создания единственного экземпляра класса (Singleton)
@@ -64,18 +81,26 @@ class JWTAuth(Hash):
         self.algorithm = algorithm  # Алгоритм подписи JWT
 
     # Метод для аутентификации пользователя
-    async def auth_user(self, filters: dict, password: str) -> Any:
+    async def auth_user(self, filters: dict, password: str, totp_key: str = None) -> Any:
         """
         :param filters: словарь для фильтрации пользователя в базе данных, пример: {'username': 'goose'}
         :param password: пароль пользователя
-        :return: объект пользователя, если аутентификация успешна, иначе исключение
+        :param totp_key: код TOTP для двухфакторной аутентификации (если требуется)
+        :return: объект пользователя, если аутентификация успешна, иначе выбрасывается исключение
         """
         user = await self.get_user(filters)  # Получаем пользователя по фильтрам
         if not user:
-            raise UserNotFound()  # Если пользователь не найден, бросаем исключение
-        if not await self.verify_password(password, user.password):  # Проверяем пароль
-            raise IncorrectPassword()  # Если пароль неверный, бросаем исключение
-        return user  # Возвращаем пользователя при успешной аутентификации
+            raise UserNotFound()  # Если пользователь не найден, выбрасываем исключение
+
+        if not await self.verify_password(password, user.password):  # Проверка пароля
+            raise IncorrectPassword()  # Если пароль неверен, выбрасываем исключение
+
+        if totp_key is not None:
+            # Если передан TOTP ключ, проверяем код двухфакторной аутентификации
+            self.verify_totp_code(user.totp_secret, totp_key)
+
+        return user  # Возвращаем объект пользователя
+
 
     # Метод для создания JWT токена
     async def create_token(self, filter_data: dict, token_data: dict = dict({}), expires_delta: int = None) -> str:
