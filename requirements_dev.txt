@@ -2,6 +2,7 @@ passlib[bcrypt]
 fastapi[all]
 sqlalchemy
 pyjwt
+pyotp
 
 pytest
 pytest-asyncio
