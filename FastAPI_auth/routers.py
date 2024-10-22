@@ -1,3 +1,5 @@
+from idlelib.window import add_windows_to_menu
+
 from FastAPI_auth.schemas import Token  # Импорт схемы Token, которая будет возвращаться при успешной аутентификации
 from fastapi import APIRouter, Depends, HTTPException, Response  # Импорт необходимых классов FastAPI
 from fastapi.security import OAuth2PasswordRequestForm  # Импорт формы для получения данных (логин и пароль) через OAuth2
@@ -71,10 +73,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
         # Использование pyotp для создания URL для конфигурации двухфакторной аутентификации
         # 'provisioning_uri' создаёт специальный URL для добавления в приложения вроде Google Authenticator
         # Пользователь сканирует этот QR-код или вводит данные вручную в своё приложение 2FA
-        return pyotp.totp.TOTP('JBSWY3DPEHPK3PXP').provisioning_uri(
-            name=form_data.username,  # Имя пользователя, которое будет отображаться в приложении 2FA
-            issuer_name='Goose App'  # Название приложения или сервиса, который использует 2FA
-        )
+        return await Auth.jwt_auth.get_totp_url(totp_token, user.username)
     except Exception as e:
         # Обработка исключений. Если возникает ошибка, возвращается исключение HTTP с кодом 401 (Unauthorized)
         # и описание ошибки передаётся в качестве 'detail'
