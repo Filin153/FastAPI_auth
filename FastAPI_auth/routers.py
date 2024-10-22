@@ -1,10 +1,13 @@
-from idlelib.window import add_windows_to_menu
-
 from FastAPI_auth.schemas import Token  # Импорт схемы Token, которая будет возвращаться при успешной аутентификации
 from fastapi import APIRouter, Depends, HTTPException, Response  # Импорт необходимых классов FastAPI
 from fastapi.security import OAuth2PasswordRequestForm  # Импорт формы для получения данных (логин и пароль) через OAuth2
 from typing import Annotated, Any  # Импорт для аннотаций типов
 from .jwt_auth import Auth
+import qrcode
+from fastapi import HTTPException, Depends
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+from typing import Annotated
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter()
@@ -46,7 +49,7 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 
 
 @router.post("/totp")
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> StreamingResponse:
     try:
         # Аутентификация пользователя по имени пользователя и паролю
         # Мы вызываем метод 'auth_user', который проверяет существование пользователя и правильность пароля
@@ -73,7 +76,24 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> T
         # Использование pyotp для создания URL для конфигурации двухфакторной аутентификации
         # 'provisioning_uri' создаёт специальный URL для добавления в приложения вроде Google Authenticator
         # Пользователь сканирует этот QR-код или вводит данные вручную в своё приложение 2FA
-        return await Auth.jwt_auth.get_totp_url(totp_token, user.username)
+        # Получение TOTP URL
+        totp_url = await jwt_auth.get_totp_url(totp_token, user.username)
+
+        # Генерация QR-кода
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+        qr.add_data(totp_url)
+        qr.make(fit=True)
+
+        # Создание изображения QR-кода
+        img = qr.make_image(fill='black', back_color='white')
+
+        # Сохранение изображения в байтовый поток
+        img_io = BytesIO()
+        img.save(img_io, 'PNG')
+        img_io.seek(0)
+
+        # Возвращаем изображение в виде ответа
+        return StreamingResponse(img_io, media_type="image/png")
     except Exception as e:
         # Обработка исключений. Если возникает ошибка, возвращается исключение HTTP с кодом 401 (Unauthorized)
         # и описание ошибки передаётся в качестве 'detail'

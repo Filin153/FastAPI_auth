@@ -3,6 +3,7 @@ fastapi[all]
 sqlalchemy
 pyjwt
 pyotp
+qrcode[pil]
 
 pytest
 pytest-asyncio
