@@ -150,6 +150,11 @@ class JWTAuth(Hash, TwoFAuth):
             raise credentials_exception  # Если пользователь не найден, выбрасываем исключение
         return user  # Возвращаем объект пользователя
 
+    async def get_current_user_header_totp(self, access_token: Annotated[str, Depends(oauth2_scheme)], totp_key: str):
+        user = await self.get_current_user_header(access_token)
+        await self.verify_totp_code(user.totp_secret, totp_key)
+        return user
+
     # Метод для получения текущего пользователя по токену из куки
     async def get_current_user_cookie(self, request: Request):
         credentials_exception = HTTPException(
@@ -177,6 +182,11 @@ class JWTAuth(Hash, TwoFAuth):
         if user is None:
             raise credentials_exception  # Если пользователь не найден, выбрасываем исключение
         return user  # Возвращаем объект пользователя
+
+    async def get_current_user_cookie_totp(self, request: Request, totp_key: str):
+        user = await self.get_current_user_cookie(request)
+        await self.verify_totp_code(user.totp_secret, totp_key)
+        return user
 
     # Метод для проверки наличия метода "get" в объекте базы данных
     @staticmethod
