@@ -110,9 +110,8 @@ class JWTAuth(Hash, TwoFAuth):
 
         return user  # Возвращаем объект пользователя
 
-
     # Метод для создания JWT токена
-    async def create_token(self, filter_data: dict, token_data: dict = dict({}), expires_delta: int = None) -> str:
+    async def create_token(self, user: UserDTO, filter_data: dict = dict({}), token_data: dict = dict({}), expires_delta: int = None) -> str:
         """
         :param token_data: основные данные токена
         :param filter_data: данные для поиска пользователя в базе данных, пример: {'username': 'goose'}
@@ -120,6 +119,7 @@ class JWTAuth(Hash, TwoFAuth):
         :return: закодированный JWT токен
         """
         to_encode = token_data.copy()  # Копируем данные токена
+        to_encode['user'] = user.dict()
         to_encode['filters'] = filter_data.copy()  # Добавляем данные фильтра (пользователя)
         if expires_delta:  # Если передано время жизни токена, добавляем его
             expire = datetime.now(timezone.utc) + timedelta(minutes=expires_delta)
@@ -139,21 +139,20 @@ class JWTAuth(Hash, TwoFAuth):
         try:
             # Расшифровываем токен и извлекаем данные
             payload: dict = jwt.decode(access_token, self.secret_key, algorithms=[self.algorithm])
-            filters: str = payload.get("filters")  # Извлекаем фильтры пользователя из токена
-            if filters is None:
-                raise credentials_exception  # Если фильтры отсутствуют, выбрасываем исключение
             token_data = {key: val for key, val in payload.items()}  # Собираем данные токена
         except InvalidTokenError:
             raise credentials_exception  # Если токен недействителен, выбрасываем исключение
-        user = await self.get_user(token_data['filters'])  # Получаем пользователя по фильтрам
-        if user is None:
-            raise credentials_exception  # Если пользователь не найден, выбрасываем исключение
-        return user  # Возвращаем объект пользователя
+
+        user = UserDTO(**token_data['user'])
+        user.password = ""
+        user.totp_secret = ""
+        return user # Возвращаем объект пользователя
 
     async def get_current_user_header_totp(self, access_token: Annotated[str, Depends(oauth2_scheme)], totp_key: str):
         user = await self.get_current_user_header(access_token)
         await self.verify_totp_code(user.totp_secret, totp_key)
         return user
+
 
     # Метод для получения текущего пользователя по токену из куки
     async def get_current_user_cookie(self, request: Request):
@@ -172,21 +171,20 @@ class JWTAuth(Hash, TwoFAuth):
         try:
             # Расшифровываем токен и извлекаем данные
             payload: dict = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            filters: str = payload.get("filters")  # Извлекаем фильтры пользователя из токена
-            if filters is None:
-                raise credentials_exception  # Если фильтры отсутствуют, выбрасываем исключение
             token_data = {key: val for key, val in payload.items()}  # Собираем данные токена
         except InvalidTokenError:
             raise credentials_exception  # Если токен недействителен, выбрасываем исключение
-        user = await self.get_user(token_data['filters'])  # Получаем пользователя по фильтрам
-        if user is None:
-            raise credentials_exception  # Если пользователь не найден, выбрасываем исключение
+
+        user = UserDTO(**token_data['user'])
+        user.password = ""
+        user.totp_secret = ""
         return user  # Возвращаем объект пользователя
 
     async def get_current_user_cookie_totp(self, request: Request, totp_key: str):
         user = await self.get_current_user_cookie(request)
         await self.verify_totp_code(user.totp_secret, totp_key)
         return user
+
 
     # Метод для проверки наличия метода "get" в объекте базы данных
     @staticmethod
