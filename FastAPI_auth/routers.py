@@ -1,7 +1,6 @@
-from FastAPI_auth.schemas import Token  # Импорт схемы Token, которая будет возвращаться при успешной аутентификации
+from .schemas import Token  # Импорт схемы Token, которая будет возвращаться при успешной аутентификации
 from fastapi import APIRouter, Depends, HTTPException, Response  # Импорт необходимых классов FastAPI
 from fastapi.security import OAuth2PasswordRequestForm  # Импорт формы для получения данных (логин и пароль) через OAuth2
-from typing import Annotated, Any  # Импорт для аннотаций типов
 from .jwt_auth import Auth
 import qrcode
 from fastapi import HTTPException, Depends
@@ -14,7 +13,7 @@ router = APIRouter()
 
 # POST-запрос для аутентификации и получения токена
 @router.post("/token")
-async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> bool:
     """
     Функция для обработки запроса на аутентификацию пользователя.
     :param response: объект Response для установки куки с токеном
@@ -34,22 +33,22 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 
         # Генерация JWT токена для аутентифицированного пользователя
         access_token = await Auth.jwt_auth.create_token(
+            user=user,
             token_data={"some_key": "some_value"},  # Дополнительные данные в токен (при необходимости)
-            filter_data={'username': user.username}  # Используем имя пользователя для фильтрации
         )
 
         # Установка токена в куки с флагом httponly (недоступен для JavaScript) и secure (только через HTTPS)
         response.set_cookie("access_token", "Bearer " + access_token, httponly=True, secure=True)
 
         # Возвращаем токен в виде объекта Token
-        return Token(access_token=access_token, token_type="Bearer")
+        return True
     except Exception as e:
         # Если возникает ошибка, выбрасываем HTTP-исключение с кодом 401 и сообщением об ошибке
         raise HTTPException(status_code=401, detail=str(e))
 
 
 @router.post("/totp")
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> StreamingResponse:
+async def token_totp(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> StreamingResponse:
     try:
         # Аутентификация пользователя по имени пользователя и паролю
         # Мы вызываем метод 'auth_user', который проверяет существование пользователя и правильность пароля
@@ -100,19 +99,9 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> S
         raise HTTPException(status_code=401, detail=str(e))
 
 
-# GET-запрос для получения данных текущего пользователя через заголовок Authorization
-@router.get("/login/head")
-async def me_head(current_user: Auth.auth_header):
-    """
-    Функция для получения текущего пользователя по токену из заголовка Authorization.
-    :param current_user: объект текущего пользователя, извлеченный из JWT токена
-    :return: информация о текущем пользователе
-    """
-    return current_user  # Возвращаем объект пользователя (в зависимости от реализации это может быть JSON с данными)
-
 # GET-запрос для получения данных текущего пользователя через куки
-@router.get("/login/cookie")
-async def me_cookie(current_user: Auth.auth_cookie):
+@router.get("/login")
+async def login_cookie(current_user: Auth.auth_cookie):
     """
     Функция для получения текущего пользователя по токену, сохраненному в куки.
     :param current_user: объект текущего пользователя, извлеченный из JWT токена, который хранится в куки

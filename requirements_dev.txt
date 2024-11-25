@@ -5,6 +5,8 @@ pyjwt
 pyotp
 qrcode[pil]
 
+aiosqlite
+
 pytest
 pytest-asyncio
 httpx

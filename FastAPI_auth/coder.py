@@ -2,11 +2,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 import jwt
 import pyotp
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from .excepts import *
+from .schemas import UserSchemas
 
 # URL для получения токена
 tokenUrl = "/token"
@@ -111,16 +112,14 @@ class JWTAuth(Hash, TwoFAuth):
         return user  # Возвращаем объект пользователя
 
     # Метод для создания JWT токена
-    async def create_token(self, user: UserDTO, filter_data: dict = dict({}), token_data: dict = dict({}), expires_delta: int = None) -> str:
+    async def create_token(self, user: UserSchemas, token_data: dict = dict({}), expires_delta: int = None) -> str:
         """
         :param token_data: основные данные токена
-        :param filter_data: данные для поиска пользователя в базе данных, пример: {'username': 'goose'}
         :param expires_delta: время жизни токена
         :return: закодированный JWT токен
         """
         to_encode = token_data.copy()  # Копируем данные токена
         to_encode['user'] = user.dict()
-        to_encode['filters'] = filter_data.copy()  # Добавляем данные фильтра (пользователя)
         if expires_delta:  # Если передано время жизни токена, добавляем его
             expire = datetime.now(timezone.utc) + timedelta(minutes=expires_delta)
             to_encode.update({"exp": expire})  # Добавляем метку времени "exp" для срока действия токена
@@ -128,30 +127,6 @@ class JWTAuth(Hash, TwoFAuth):
         # Кодируем данные в JWT токен с использованием секретного ключа и алгоритма
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt  # Возвращаем закодированный токен
-
-    # Метод для получения текущего пользователя по токену из заголовка
-    async def get_current_user_header(self, access_token: Annotated[str, Depends(oauth2_scheme)]):
-        credentials_exception = HTTPException(
-            status_code=401,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        try:
-            # Расшифровываем токен и извлекаем данные
-            payload: dict = jwt.decode(access_token, self.secret_key, algorithms=[self.algorithm])
-            token_data = {key: val for key, val in payload.items()}  # Собираем данные токена
-        except InvalidTokenError:
-            raise credentials_exception  # Если токен недействителен, выбрасываем исключение
-
-        user = UserDTO(**token_data['user'])
-        user.password = ""
-        user.totp_secret = ""
-        return user # Возвращаем объект пользователя
-
-    async def get_current_user_header_totp(self, access_token: Annotated[str, Depends(oauth2_scheme)], totp_key: str):
-        user = await self.get_current_user_header(access_token)
-        await self.verify_totp_code(user.totp_secret, totp_key)
-        return user
 
 
     # Метод для получения текущего пользователя по токену из куки
@@ -175,7 +150,7 @@ class JWTAuth(Hash, TwoFAuth):
         except InvalidTokenError:
             raise credentials_exception  # Если токен недействителен, выбрасываем исключение
 
-        user = UserDTO(**token_data['user'])
+        user = UserSchemas(**token_data['user'])
         user.password = ""
         user.totp_secret = ""
         return user  # Возвращаем объект пользователя

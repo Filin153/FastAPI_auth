@@ -4,3 +4,5 @@ sqlalchemy
 pyjwt
 pyotp
 qrcode[pil]
+
+aiosqlite
