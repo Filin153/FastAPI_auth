@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from FastAPI_auth.routers import router as auth_router
+from FastAPI_auth.routers_auth import router as auth_router
+from FastAPI_auth.router_user import router as user_router
 from FastAPI_auth.models import Base
 from FastAPI_auth.database.database import engine, get_session
 from FastAPI_auth.models import UserModel
@@ -25,3 +26,4 @@ async def startup():
 
 
 app.include_router(auth_router)
+app.include_router(user_router)

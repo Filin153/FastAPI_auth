@@ -103,7 +103,7 @@ class JWTAuth(Hash, TwoFAuth):
         if not await self.verify_password(password, user.password):  # Проверка пароля
             raise IncorrectPassword()  # Если пароль неверен, выбрасываем исключение
 
-        if user.totp_secret != None and totp_key == None:
+        if (user.totp_secret != None and user.totp_secret != "") and totp_key == None:
             raise Exception("2FA activate for this is user, but totp secret is not set")
         elif totp_key:
             # Если передан TOTP ключ, проверяем код двухфакторной аутентификации

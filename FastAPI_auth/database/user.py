@@ -1,9 +1,8 @@
-from watchfiles import awatch
-
 from FastAPI_auth.models import UserModel
 from FastAPI_auth.schemas import UserSchemas
 from .database import get_session
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 class UserDB:
     async def get(self, filters: dict):
@@ -13,5 +12,20 @@ class UserDB:
             user = res.scalars().one_or_none()
             if user is None:
                 return None
-            return UserSchemas.model_validate(user, from_attributes=True)
+
+        return UserSchemas.model_validate(user, from_attributes=True)
+
+    async def create(self, user: UserSchemas):
+        user = UserModel(**user.dict())
+        async with get_session() as session:
+            try:
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
+            except Exception as e:
+                await session.rollback()
+                raise e
+
+        return True
+
 
