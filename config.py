@@ -13,5 +13,6 @@ class FakeDB:
             user = type('User', (), {})()  # Создаем объект User динамически
             user.username = username
             user.password = self.users[username]['password']
+            user.totp_secret = None
             return user
         return None

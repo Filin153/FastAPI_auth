@@ -1,9 +1,10 @@
 from typing import Annotated, Any
 from fastapi import Depends
-from FastAPI_auth.coder import JWTAuth
-from config import FakeDB
+from .coder import JWTAuth
+from .database.user import UserDB
 
 class Auth(JWTAuth):
-    jwt_auth = JWTAuth(secret_key="qweqweasdasd", database=[FakeDB(), "get"])
+    jwt_auth = JWTAuth(secret_key="secret_key", database=[UserDB(), "get"])
     auth_cookie = Annotated[Any, Depends(jwt_auth.get_current_user_cookie)]
-    auth_header = Annotated[Any, Depends(jwt_auth.get_current_user_header)]
+
+    auth_cookie_totp = Annotated[Any, Depends(jwt_auth.get_current_user_cookie_totp)]

@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from FastAPI_auth.routers import router
+from FastAPI_auth.routers_auth import router
 from fastapi import FastAPI
 
 app = FastAPI()
