@@ -1,0 +1,70 @@
+version: "3"
+
+services:
+  auth:
+    build: ./src/auth/.
+    container_name: auth
+    restart: always
+    networks:
+      - app
+    volumes:
+      - ./.env:/app/.env
+      - ./core:/app/core
+    ports:
+      - 1111:1111
+
+  user:
+    build: ./src/user/.
+    container_name: user
+    restart: always
+    networks:
+      - app
+    volumes:
+      - ./.env:/app/.env
+      - ./core:/app/core
+    ports:
+      - 1112:1112
+
+  alembic:
+    build: ./src/Alembic/.
+    container_name: alembic
+    restart: on-failure
+    networks:
+      - app
+    volumes:
+      - ./.env:/app/.env
+      - ./core/:/app/core
+      - ./alembic/:/app/alembic
+      - ./alembic.ini/:/app/alembic.ini
+    command: alembic upgrade head
+
+  db:
+    image: postgres
+    restart: always
+    shm_size: 512mb
+    volumes:
+      - pg-data:/var/lib/postgresql/data/pgdata
+    networks:
+      - app
+    ports:
+      - 8881:5432
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_DB: ${PG_DB_NAME}
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - app
+    ports:
+      - 8908:8080
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  pg-data:

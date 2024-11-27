@@ -1,0 +1,8 @@
+passlib[bcrypt]
+fastapi[all]
+sqlalchemy
+pyjwt
+pyotp
+qrcode[pil]
+asyncpg
+psycopg2-binary
