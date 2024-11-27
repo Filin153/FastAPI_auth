@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from core.schemas.user import UserSchemas
+from core.schemas.user import UserCreate
 from core.database.user import UserDB
 from core.services.auth.jwt_auth import Auth
 
@@ -13,7 +13,7 @@ router = APIRouter(
 user_db = UserDB()
 
 @router.post("")
-async def create_user(user: UserSchemas):
+async def create_user(user: UserCreate):
     user.password = await Auth.get_password_hash(user.password)
     try:
         return await user_db.create(user)
