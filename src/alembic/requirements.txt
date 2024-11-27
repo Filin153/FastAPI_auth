@@ -1,0 +1,5 @@
+alembic
+pydantic
+pydantic-settings
+asyncpg
+psycopg2-binary
