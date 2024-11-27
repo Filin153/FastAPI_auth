@@ -32,7 +32,7 @@ async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
         # Генерация JWT токена для аутентифицированного пользователя
         access_token = await Auth.jwt_auth.create_token(
             user=user,
-            token_data={"some_key": "some_value"},  # Дополнительные данные в токен (при необходимости)
+            token_data={"client_id": form_data.client_id, "client_secret": form_data.client_secret},  # Дополнительные данные в токен (при необходимости)
         )
 
         # Установка токена в куки с флагом httponly (недоступен для JavaScript) и secure (только через HTTPS)
