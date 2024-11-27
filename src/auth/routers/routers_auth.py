@@ -107,8 +107,7 @@ async def login_cookie(current_user: Auth.auth_cookie):
     """
     return current_user  # Возвращаем объект пользователя (данные о пользователе)
 
-# GET-запрос для получения данных текущего пользователя через куки
-@router.get("/logout")
+@router.post("/logout")
 async def logout_cookie(response: Response):
     response.set_cookie("access_token", "", httponly=True, secure=True)
     return True

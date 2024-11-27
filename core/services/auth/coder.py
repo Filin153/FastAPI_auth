@@ -82,7 +82,7 @@ class GetUserFromJWT(TwoFAuth):
         )
 
         token = request.cookies.get("access_token")  # Извлекаем токен из куки
-        if token == None:
+        if token == None or token == "":
             raise HTTPException(status_code=401, detail="Token missing")
         elif token.split()[0] != "Bearer":
             raise credentials_exception  # Если схема аутентификации не "Bearer", выбрасываем исключение
