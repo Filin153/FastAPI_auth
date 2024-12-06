@@ -28,7 +28,7 @@ async def me_cookie(user: Auth.auth_cookie):
         raise HTTPException(400, detail={"message": str(e)})
 
 @router.get("/me/header")
-async def me_header(user: Auth.auth_cookie):
+async def me_header(user: Auth.auth_header):
     try:
         return user
     except Exception as e:

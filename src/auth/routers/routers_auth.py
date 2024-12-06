@@ -98,8 +98,8 @@ async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 
 
 # GET-запрос для получения данных текущего пользователя через header
-@router.get("/login")
-async def login_header(current_user: Auth.auth_cookie):
+@router.get("/login/header")
+async def login_header(current_user: Auth.auth_header):
     """
     Функция для получения текущего пользователя по токену, сохраненному в куки.
     :param current_user: объект текущего пользователя, извлеченный из JWT токена, который хранится в куки
