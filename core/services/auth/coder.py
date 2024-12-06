@@ -176,6 +176,8 @@ class JWTAuth(Hash, TwoFAuth):
         #     # Если передан TOTP ключ, проверяем код двухфакторной аутентификации
         #     await self.verify_totp_code(user.totp_secret, totp_key)
 
+        user.password = ""
+        user.totp_secret = ""
         return user  # Возвращаем объект пользователя
 
     # Метод для создания JWT токена
