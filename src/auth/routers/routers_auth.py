@@ -97,6 +97,17 @@ async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 #         raise HTTPException(status_code=401, detail=str(e))
 
 
+# GET-запрос для получения данных текущего пользователя через header
+@router.get("/login")
+async def login_header(current_user: Auth.auth_cookie):
+    """
+    Функция для получения текущего пользователя по токену, сохраненному в куки.
+    :param current_user: объект текущего пользователя, извлеченный из JWT токена, который хранится в куки
+    :return: информация о текущем пользователе
+    """
+    return {"message": "successful login"}  # Возвращаем объект пользователя (данные о пользователе)
+
+
 # GET-запрос для получения данных текущего пользователя через куки
 @router.get("/login")
 async def login_cookie(current_user: Auth.auth_cookie):
