@@ -39,7 +39,7 @@ async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
         response.set_cookie("access_token", "Bearer " + access_token, httponly=True, secure=True)
 
         # Возвращаем токен в виде объекта Token
-        return {"message": "successful create access token"}
+        return {"Authorization": "Bearer " + access_token}
     except Exception as e:
         # Если возникает ошибка, выбрасываем HTTP-исключение с кодом 401 и сообщением об ошибке
         raise HTTPException(status_code=401, detail=str(e))
