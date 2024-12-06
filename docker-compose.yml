@@ -3,7 +3,7 @@ version: "3"
 services:
   auth:
     build: ./src/auth/.
-    container_name: auth
+    container_name: auth_auth
     restart: always
     networks:
       - app
@@ -15,7 +15,7 @@ services:
 
   user:
     build: ./src/user/.
-    container_name: user
+    container_name: user_auth
     restart: always
     networks:
       - app
@@ -26,8 +26,7 @@ services:
       - 1112:1112
 
   alembic:
-    build: ./src/Alembic/.
-    container_name: alembic
+    build: ./src/alembic/.
     restart: on-failure
     networks:
       - app
@@ -60,7 +59,7 @@ services:
     networks:
       - app
     ports:
-      - 8908:8080
+      - 8988:8080
 
 networks:
   app:
