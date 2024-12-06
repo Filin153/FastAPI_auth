@@ -1,5 +1,5 @@
 from core.models.user import UserModel
-from core.schemas.user import UserSchemas
+from core.schemas.user import UserSchemas, UserCreate
 from .database import get_session_async
 from sqlalchemy import select
 
@@ -15,7 +15,7 @@ class UserDB:
 
         return UserSchemas.model_validate(user, from_attributes=True)
 
-    async def create(self, user: UserSchemas):
+    async def create(self, user: UserCreate):
         user = UserModel(**user.dict())
         async with get_session_async() as session:
             try:

@@ -11,7 +11,7 @@ router = APIRouter(
 
 # POST-запрос для аутентификации и получения токена
 @router.post("/token")
-async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> bool:
+async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> dict:
     """
     Функция для обработки запроса на аутентификацию пользователя.
     :param response: объект Response для установки куки с токеном
@@ -32,14 +32,14 @@ async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
         # Генерация JWT токена для аутентифицированного пользователя
         access_token = await Auth.jwt_auth.create_token(
             user=user,
-            token_data={"some_key": "some_value"},  # Дополнительные данные в токен (при необходимости)
+            token_data={"client_id": form_data.client_id, "client_secret": form_data.client_secret},  # Дополнительные данные в токен (при необходимости)
         )
 
         # Установка токена в куки с флагом httponly (недоступен для JavaScript) и secure (только через HTTPS)
         response.set_cookie("access_token", "Bearer " + access_token, httponly=True, secure=True)
 
         # Возвращаем токен в виде объекта Token
-        return True
+        return {"Authorization": "Bearer " + access_token}
     except Exception as e:
         # Если возникает ошибка, выбрасываем HTTP-исключение с кодом 401 и сообщением об ошибке
         raise HTTPException(status_code=401, detail=str(e))
@@ -97,6 +97,17 @@ async def token(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
 #         raise HTTPException(status_code=401, detail=str(e))
 
 
+# GET-запрос для получения данных текущего пользователя через header
+@router.get("/login/header")
+async def login_header(current_user: Auth.auth_header):
+    """
+    Функция для получения текущего пользователя по токену, сохраненному в куки.
+    :param current_user: объект текущего пользователя, извлеченный из JWT токена, который хранится в куки
+    :return: информация о текущем пользователе
+    """
+    return {"message": "successful login"}  # Возвращаем объект пользователя (данные о пользователе)
+
+
 # GET-запрос для получения данных текущего пользователя через куки
 @router.get("/login")
 async def login_cookie(current_user: Auth.auth_cookie):
@@ -105,4 +116,9 @@ async def login_cookie(current_user: Auth.auth_cookie):
     :param current_user: объект текущего пользователя, извлеченный из JWT токена, который хранится в куки
     :return: информация о текущем пользователе
     """
-    return current_user  # Возвращаем объект пользователя (данные о пользователе)
+    return {"message": "successful login"}  # Возвращаем объект пользователя (данные о пользователе)
+
+@router.post("/logout")
+async def logout_cookie(response: Response):
+    response.set_cookie("access_token", "", httponly=True, secure=True)
+    return {"message": "successful logout"}

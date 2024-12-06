@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Annotated
 import jwt
 import pyotp
-from fastapi import Request
+from fastapi import Request, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
@@ -76,14 +76,14 @@ class GetUserFromJWT(TwoFAuth):
     # Метод для получения текущего пользователя по токену из куки
     async def get_user_from_cookie(self, request: Request):
         credentials_exception = HTTPException(
-            status_code=401,
+            status_code=403,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
         token = request.cookies.get("access_token")  # Извлекаем токен из куки
-        if token == None:
-            raise HTTPException(status_code=401, detail="Token missing")
+        if token == None or token == "":
+            raise HTTPException(status_code=403, detail="Token missing")
         elif token.split()[0] != "Bearer":
             raise credentials_exception  # Если схема аутентификации не "Bearer", выбрасываем исключение
 
@@ -103,6 +103,28 @@ class GetUserFromJWT(TwoFAuth):
 
     async def get_user_from_cookie_totp(self, request: Request, totp_key: str):
         user = await self.get_user_from_cookie(request)
+        await self.verify_totp_code(user.totp_secret, totp_key)
+        return user
+
+    async def get_user_from_header(self, access_token: Annotated[str, Depends(oauth2_scheme)]):
+        credentials_exception = HTTPException(
+            status_code=403,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        try:
+            # Расшифровываем токен и извлекаем данные
+            payload: dict = jwt.decode(access_token, self.secret_key, algorithms=[self.algorithm])
+            token_data = {key: val for key, val in payload.items()}  # Собираем данные токена
+        except InvalidTokenError:
+            raise credentials_exception  # Если токен недействителен, выбрасываем исключение
+        user = UserSchemas(**token_data['user'])
+        user.password = ""
+        user.totp_secret = ""
+        return user # Возвращаем объект пользователя
+
+    async def get_user_from_header_totp(self, access_token: Annotated[str, Depends(oauth2_scheme)], totp_key: str):
+        user = await self.get_user_from_header(access_token)
         await self.verify_totp_code(user.totp_secret, totp_key)
         return user
 
@@ -154,6 +176,8 @@ class JWTAuth(Hash, TwoFAuth):
         #     # Если передан TOTP ключ, проверяем код двухфакторной аутентификации
         #     await self.verify_totp_code(user.totp_secret, totp_key)
 
+        user.password = ""
+        user.totp_secret = ""
         return user  # Возвращаем объект пользователя
 
     # Метод для создания JWT токена
