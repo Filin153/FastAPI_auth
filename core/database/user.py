@@ -1,11 +1,13 @@
+from sqlalchemy import select
+
 from core.models.user import UserModel
 from core.schemas.user import UserSchemas, UserCreate
 from .database import get_session_async
-from sqlalchemy import select
+from ..services.password import Hash
 
 
 class UserDB:
-    async def get(self, filters: dict):
+    async def get(self, filters: dict) -> UserSchemas | None:
         query = select(UserModel).filter_by(**filters)
         async with get_session_async() as session:
             res = await session.execute(query)
@@ -15,7 +17,8 @@ class UserDB:
 
         return UserSchemas.model_validate(user, from_attributes=True)
 
-    async def create(self, user: UserCreate):
+    async def create(self, user: UserCreate) -> bool:
+        user.password = await Hash.get_password_hash(user.password)
         user = UserModel(**user.dict())
         async with get_session_async() as session:
             try:
@@ -27,5 +30,3 @@ class UserDB:
                 raise e
 
         return True
-
-

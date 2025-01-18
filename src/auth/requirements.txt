@@ -1,8 +1,11 @@
-passlib[bcrypt]
 fastapi[all]
+authx
+authx_extra
+python-dotenv
+fastapi-limiter
+aioredis
 sqlalchemy
-pyjwt
-pyotp
-qrcode[pil]
 asyncpg
 psycopg2-binary
+greenlet
+passlib
