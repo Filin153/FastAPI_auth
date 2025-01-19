@@ -5,18 +5,14 @@ from threading import Lock
 
 from authx import AuthXConfig, AuthX, RequestToken  # Предполагается, что этот класс определён в пакете authx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends
-
-load_dotenv()
+from fastapi import FastAPI, Depends, Response, Request
 
 load_dotenv()
 
 
 class Auth:
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-
     AUTH_CONFIG = AuthXConfig(
-        JWT_SECRET_KEY=JWT_SECRET_KEY,
+        JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY"),
 
         # Access и Refresh Token таймауты и криптографические настройки
         JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=15),
@@ -32,7 +28,7 @@ class Auth:
         JWT_IDENTITY_CLAIM="sub",
         JWT_PRIVATE_KEY=None,
         JWT_PUBLIC_KEY=None,
-        JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=20),
+        JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=30),
 
         # Локации, где передаётся токен (в данном случае: заголовки и cookies)
         JWT_TOKEN_LOCATION=["headers", "cookies"],
@@ -88,7 +84,7 @@ class Auth:
     auth: AuthX = None
     __true = False
     _instance = None  # Для хранения единственного экземпляра
-    _lock = Lock()    # Для потокобезопасной инициализации
+    _lock = Lock()  # Для потокобезопасной инициализации
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -103,11 +99,68 @@ class Auth:
             cls.auth: AuthX = AuthX(config=cls.AUTH_CONFIG)
             if app:
                 cls.auth.handle_errors(app)
+
                 cls.__true = True
 
-    def role_checker(self, allowed_roles: list[str]):
-        async def wrapper(token: RequestToken = Depends(self.auth.get_token_from_request)):
-            token_payload = self.auth.verify_token(token=token)
+    async def __set_csrf_to_token(self, request: Request, token: RequestToken) -> RequestToken:
+        csrf_header_name = (
+            self.auth.config.JWT_ACCESS_CSRF_HEADER_NAME
+            if token.type == "access"
+            else self.auth.config.JWT_REFRESH_CSRF_HEADER_NAME
+        )
+        csrf_cookie_name = (
+            self.auth.config.JWT_ACCESS_CSRF_COOKIE_NAME
+            if token.type == "access"
+            else self.auth.config.JWT_REFRESH_CSRF_COOKIE_NAME
+        )
+
+        csrf_token_header = request.headers.get(csrf_header_name)
+        csrf_token_cookie = request.cookies.get(csrf_cookie_name)
+
+        if not csrf_token_header:
+            raise ValueError(f"Missing CSRF token in header: {csrf_header_name}")
+        elif not csrf_token_cookie:
+            raise ValueError(f"Missing CSRF token in cookies: {csrf_cookie_name}")
+
+        csrf_token_header = csrf_token_header.strip()
+        csrf_token_cookie = csrf_token_cookie.strip()
+
+        if csrf_token_header != csrf_token_cookie:
+            raise ValueError("CSRF tokens from header and cookies do not match.")
+
+        token.csrf = csrf_token_header
+        return token
+
+
+    def logout(self):
+        async def wrapper(response: Response):
+            self.auth.unset_access_cookies(response)
+            self.auth.unset_refresh_cookies(response)
+        return Depends(wrapper)
+
+    def refresh_token(self):
+        async def wrapper(request: Request, response: Response, token: RequestToken = Depends(self.auth.get_token_from_request(type="refresh"))):
+            if token.location == "cookies":
+                token = await self.__set_csrf_to_token(request, token)
+                token_payload = self.auth.verify_token(token=token)
+            else:
+                token_payload = self.auth.verify_token(token=token, verify_csrf=False)
+
+            access_token = self.auth.create_access_token(token_payload.sub)
+            self.auth.set_access_cookies(access_token, response=response)
+            return access_token  # payload можно вернуть для дальнейшего использования в эндпоинте
+        return Depends(wrapper)
+
+    def auth_user(self, allowed_roles: list[str] = ["*"]):
+        async def wrapper(request: Request, token: RequestToken = Depends(self.auth.get_token_from_request())):
+            if not token:
+                raise ValueError(self.auth.MSG_MissingTokenError)
+
+            if token.location == "cookies":
+                token = await self.__set_csrf_to_token(request, token)
+                token_payload = self.auth.verify_token(token=token)
+            else:
+                token_payload = self.auth.verify_token(token=token, verify_csrf=False)
 
             if len(allowed_roles) == 1 and "*" == allowed_roles[0]:
                 return token_payload
@@ -122,3 +175,11 @@ class Auth:
             return token_payload  # payload можно вернуть для дальнейшего использования в эндпоинте
 
         return Depends(wrapper)
+
+    async def create_token(self, uid: str, response: Response, **kwargs):
+        access_token = self.auth.create_access_token(uid=uid, **kwargs)
+        refresh_token = self.auth.create_refresh_token(uid=uid)
+        self.auth.set_access_cookies(access_token, response=response)
+        self.auth.set_refresh_cookies(refresh_token, response=response)
+
+        return access_token, refresh_token

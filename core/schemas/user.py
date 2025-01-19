@@ -8,7 +8,7 @@ class UserCreate(BaseModel):
 
 class UserAuthData(BaseModel):
     username: str | None
-    email: str | None
+    email: EmailStr | None
     password: str
 
 class UserSchemas(UserCreate):

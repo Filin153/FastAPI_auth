@@ -11,9 +11,9 @@ router = APIRouter(
 )
 
 user_db = UserDB()
-auth = Auth.auth
+auth = Auth()
 
 
 @router.get('/profile')
-async def get_profile(payload: TokenPayload = Depends(auth.access_token_required)) -> UserSchemas:
+async def get_profile(payload: TokenPayload = auth.auth_user()) -> UserSchemas:
     return await user_db.get({"id": int(payload.sub)})

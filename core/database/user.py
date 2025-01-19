@@ -1,5 +1,5 @@
 from sqlalchemy import select
-
+from sqlalchemy.exc import IntegrityError
 from core.models.user import UserModel
 from core.schemas.user import UserSchemas, UserCreate
 from .database import get_session_async
@@ -25,8 +25,11 @@ class UserDB:
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
+            except IntegrityError:
+                raise Exception("User already exists")
             except Exception as e:
-                await session.rollback()
                 raise e
+            finally:
+                await session.rollback()
 
         return True
