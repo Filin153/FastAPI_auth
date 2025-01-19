@@ -2,6 +2,7 @@ import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
 from email_validator import validate_email
 
 
@@ -63,6 +64,7 @@ class SMTPAsync:
 
         return True
 
+
 class SMTPSync:
     def __init__(self, smtp_server: str, smtp_port: int,
                  smtp_username: str, smtp_password: str,
@@ -121,6 +123,7 @@ class SMTPSync:
 
         return True
 
+
 class SMTP:
     def __init__(self, smtp_server: str, smtp_port: int,
                  smtp_username: str, smtp_password: str,
@@ -138,10 +141,11 @@ class SMTP:
                                   ssl=ssl, tls=tls, timeout=timeout)
 
         self.smtp_async = SMTPAsync(smtp_server, smtp_port,
-                                  smtp_username, smtp_password,
-                                  ssl=ssl, tls=tls, timeout=timeout)
+                                    smtp_username, smtp_password,
+                                    ssl=ssl, tls=tls, timeout=timeout)
 
         self._server = None
+
 
 class Mail(SMTP):
     def __init__(self, smtp_server: str, smtp_port: int,

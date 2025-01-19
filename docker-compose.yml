@@ -7,6 +7,9 @@ services:
     restart: always
     networks:
       - app
+    depends_on:
+      - rabbitmq
+      - redis
     volumes:
       - ./.env:/app/.env
       - ./core:/app/core
@@ -19,11 +22,28 @@ services:
     restart: always
     networks:
       - app
+    depends_on:
+      - rabbitmq
+      - redis
     volumes:
       - ./.env:/app/.env
       - ./core:/app/core
     ports:
       - 1112:1112
+
+  msg_worker:
+    build: ./src/msg_worker/.
+    container_name: msg_worker
+    restart: always
+#    ports:
+#      - 8082:8081
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./.env:/app/.env
+      - ./core/:/app/core
+    networks:
+      - app
 
   alembic:
     build: ./src/alembic/.
@@ -71,6 +91,15 @@ services:
 #    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
     volumes:
       - redis:/data
+
+  rabbitmq:
+    image: rabbitmq:4
+    container_name: rabbitmq
+    restart: always
+    #    ports:
+    #      - 8080:5672
+    networks:
+      - app
 
 networks:
   app:

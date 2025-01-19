@@ -9,3 +9,6 @@ asyncpg
 psycopg2-binary
 greenlet
 passlib
+pyotp
+pika
+bcrypt

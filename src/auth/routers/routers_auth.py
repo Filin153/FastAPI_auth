@@ -20,21 +20,9 @@ auth = Auth()
 
 
 @router.post('/token', dependencies=[Depends(RateLimiter(times=10, seconds=60))])
-async def token(data: UserAuthData, response: Response):
-    if data.username:
-        user = await user_db.get({"username": data.username})
-    elif data.email:
-        user = await user_db.get({"email": data.email})
-    else:
-        return JSONResponse({"message": "Missing username/email"}, 422)
-
-    if user is None:
-        raise HTTPException(401, "User does not exist")
-    elif Hash.verify_password(data.password, user.password):
-        access_token, refresh_token = await auth.create_token(uid=str(user.id), response=response, role=user.role)
-        return {"message": "Token create successfully", "access_token": access_token, "refresh_token": refresh_token}
-
-    return JSONResponse({"message": "Bad username/password"}, 401)
+async def token(user_auth_data: UserAuthData, response: Response):
+    user = await user_db.get({"email": user_auth_data.email})
+    return await auth.verify_user_and_create_token(user=user, user_auth_data=user_auth_data, response=response)
 
 
 @router.get('/login', dependencies=[Depends(RateLimiter(times=10, seconds=60)), auth.auth_user()])

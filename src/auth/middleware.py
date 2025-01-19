@@ -15,4 +15,4 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=400)
+            return JSONResponse({"error": str(e)}, status_code=500)

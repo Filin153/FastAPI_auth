@@ -1,16 +1,21 @@
+import logging
 import os
 from datetime import timedelta
-from http.client import HTTPException
 from threading import Lock
 
 from authx import AuthXConfig, AuthX, RequestToken  # Предполагается, что этот класс определён в пакете authx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Response, Request
+from fastapi.responses import JSONResponse
+
+from core.schemas.user import UserAuthData, UserSchemas, UserCreate
+from core.services.auth.totp import TOTPService
+from core.services.password import Hash
 
 load_dotenv()
 
 
-class Auth:
+class Auth(TOTPService):
     AUTH_CONFIG = AuthXConfig(
         JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY"),
 
@@ -95,6 +100,7 @@ class Auth:
 
     @classmethod
     def __init__(cls, app: FastAPI | None = None) -> None:
+        super().__init__(cls)
         if not cls.__true:
             cls.auth: AuthX = AuthX(config=cls.AUTH_CONFIG)
             if app:
@@ -131,15 +137,16 @@ class Auth:
         token.csrf = csrf_token_header
         return token
 
-
     def logout(self):
         async def wrapper(response: Response):
             self.auth.unset_access_cookies(response)
             self.auth.unset_refresh_cookies(response)
+
         return Depends(wrapper)
 
     def refresh_token(self):
-        async def wrapper(request: Request, response: Response, token: RequestToken = Depends(self.auth.get_token_from_request(type="refresh"))):
+        async def wrapper(request: Request, response: Response,
+                          token: RequestToken = Depends(self.auth.get_token_from_request(type="refresh"))):
             if token.location == "cookies":
                 token = await self.__set_csrf_to_token(request, token)
                 token_payload = self.auth.verify_token(token=token)
@@ -149,10 +156,18 @@ class Auth:
             access_token = self.auth.create_access_token(token_payload.sub)
             self.auth.set_access_cookies(access_token, response=response)
             return access_token  # payload можно вернуть для дальнейшего использования в эндпоинте
+
         return Depends(wrapper)
 
     def auth_user(self, allowed_roles: list[str] = ["*"]):
-        async def wrapper(request: Request, token: RequestToken = Depends(self.auth.get_token_from_request())):
+        async def wrapper(request: Request):
+            token: RequestToken = await self.auth._get_token_from_request(
+                request,
+                None,  # Explicitly passing None for locations
+                refresh=False,
+                optional=True,
+            )
+
             if not token:
                 raise ValueError(self.auth.MSG_MissingTokenError)
 
@@ -168,18 +183,25 @@ class Auth:
             # Извлекаем роль пользователя
             user_role = token_payload.get("role")
             if user_role not in allowed_roles:
-                raise HTTPException(
-                    status_code=403,
-                    detail={"message": "Permissions denied"}
-                )
+                return JSONResponse({"message": "Permissions denied"}, 403)
             return token_payload  # payload можно вернуть для дальнейшего использования в эндпоинте
 
         return Depends(wrapper)
 
-    async def create_token(self, uid: str, response: Response, **kwargs):
-        access_token = self.auth.create_access_token(uid=uid, **kwargs)
-        refresh_token = self.auth.create_refresh_token(uid=uid)
+    async def verify_user_and_create_token(self, user: UserSchemas, user_auth_data: UserAuthData, response: Response):
+        if user is None:
+            return JSONResponse({"message": "User does not exist"}, 404)
+        elif not Hash.verify_password(user_auth_data.password, user.password):
+            return JSONResponse({"message": "Invalid password"}, 403)
+
+        totp_res = await self.verify_totp(user.totp_secret, user_auth_data.totp_code)
+        if not totp_res:
+            return JSONResponse({"message": "Invalid totp code"}, 403)
+
+        access_token = self.auth.create_access_token(uid=str(user.id), role=user.role)
+        refresh_token = self.auth.create_refresh_token(uid=str(user.id))
         self.auth.set_access_cookies(access_token, response=response)
         self.auth.set_refresh_cookies(refresh_token, response=response)
 
-        return access_token, refresh_token
+        return {"message": "Token create successfully", "access_token": access_token,
+                "refresh_token": refresh_token}
