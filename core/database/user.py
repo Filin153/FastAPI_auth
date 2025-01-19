@@ -15,6 +15,7 @@ class UserDB:
             if user is None:
                 return None
 
+        user.password = ""
         return UserSchemas.model_validate(user, from_attributes=True)
 
     async def create(self, user: UserCreate) -> bool:
