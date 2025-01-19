@@ -1,8 +1,8 @@
-"""edit
+"""add new col
 
-Revision ID: 91f49bde4f0a
+Revision ID: 33f95373b11d
 Revises: 
-Create Date: 2025-01-18 22:18:49.960399
+Create Date: 2025-01-19 21:36:14.968140
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '91f49bde4f0a'
+revision: str = '33f95373b11d'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,6 +26,9 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('role', sa.Enum('ADMIN', 'USER', name='role_enum'), nullable=False),
     sa.Column('password', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('update_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('delete_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)

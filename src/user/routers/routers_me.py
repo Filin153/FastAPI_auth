@@ -7,7 +7,7 @@ from core.schemas.user import UserSchemas
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(
-    tags=['User Info']
+    tags=['User']
 )
 
 user_db = UserDB()

@@ -46,6 +46,7 @@ async def login():
 async def refresh(access_token: TokenPayload = auth.refresh_token()):
     return {"message": "Refresh in successfully", "access_token": access_token}
 
+
 @router.post('/logout', dependencies=[Depends(RateLimiter(times=10, seconds=60)), auth.logout()])
 async def logout():
     return {"message": "Logout in successfully"}
