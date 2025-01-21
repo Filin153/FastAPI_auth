@@ -22,6 +22,7 @@ user_db = UserDB()
 auth = Auth()
 
 
+# TODO Auth user on Password and Email, and then send msg
 @router.post('/totp', dependencies=[Depends(RateLimiter(times=2, seconds=60))])
 async def totp(request: Request, email: EmailStr | None = None):
     if email:
