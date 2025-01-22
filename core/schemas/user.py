@@ -1,10 +1,13 @@
-from pydantic import BaseModel, EmailStr
-from core.enums import RoleEnum
+from pydantic import BaseModel, EmailStr, Extra
+from core.enums import RoleEnum, StatusEnum
 
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+    class Config:
+        extra = Extra.allow
 
 class UserUpdate(BaseModel):
     id: int
@@ -13,6 +16,7 @@ class UserUpdate(BaseModel):
     password: str | None
     totp_secret: bytes | None
     role: RoleEnum | None
+    status: StatusEnum | None
 
 class UserAuthData(BaseModel):
     email: EmailStr
@@ -23,3 +27,4 @@ class UserSchemas(UserCreate):
     id: int
     role: RoleEnum
     totp_secret: bytes
+    status: StatusEnum

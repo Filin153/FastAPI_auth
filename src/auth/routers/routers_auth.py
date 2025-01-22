@@ -1,14 +1,10 @@
-from http.client import HTTPException
-
 from authx import TokenPayload
 from fastapi import APIRouter, Depends, Response  # Импорт необходимых классов FastAPI
-from fastapi.responses import JSONResponse
 from fastapi_limiter.depends import RateLimiter
 
 from core.database.user import UserDB
 from core.schemas.user import UserAuthData
 from core.services.auth.auth import Auth
-from core.services.password import Hash
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(

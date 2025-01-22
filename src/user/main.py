@@ -37,4 +37,4 @@ app.add_middleware(CORSMiddleware,
 
 app.add_middleware(ErrorMiddleware)
 
-app.include_router(api_router, prefix="/users")
+app.include_router(api_router, prefix="/api/v1")
