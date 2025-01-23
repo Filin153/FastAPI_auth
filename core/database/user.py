@@ -1,10 +1,10 @@
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.exc import IntegrityError
+
 from core.models.user import UserModel
 from core.schemas.user import UserSchemas, UserCreate, UserUpdate
 from .database import get_session_async
 from ..services.password import Hash
-
 
 
 class UserDB:
@@ -19,6 +19,48 @@ class UserDB:
         user.password = ""
         return UserSchemas.model_validate(user, from_attributes=True)
 
+    async def get_all(self, filters: dict, limit: int = 100, offset: int = 0) -> list[UserSchemas]:
+        query = select(UserModel).offset(offset).limit(limit)
+        if filters:
+            query = query.filter_by(**filters)
+
+        async with get_session_async() as session:
+            res = await session.execute(query)
+            users = res.scalars().all()
+            if users is None:
+                return []
+
+        for id_user, user in enumerate(users):
+            users[id_user].password = ""
+
+        return [UserSchemas.model_validate(user, from_attributes=True) for user in users]
+
+    async def delete(self, id: int) -> bool:
+        query = delete(UserModel).where(UserModel.id == id)
+        async with get_session_async() as session:
+            try:
+                await session.execute(query)
+                await session.commit()
+            except Exception as e:
+                raise e
+            finally:
+                await session.rollback()
+
+        return True
+
+    async def soft_delete(self, id: int) -> bool:
+        query = update(UserModel).where(UserModel.id == id).values({"delete_at": func.now()})
+        async with get_session_async() as session:
+            try:
+                await session.execute(query)
+                await session.commit()
+            except Exception as e:
+                raise e
+            finally:
+                await session.rollback()
+
+        return True
+
     async def update(self, user: UserUpdate) -> bool:
         if user.password:
             user.password = await Hash.get_password_hash(user.password)
@@ -30,6 +72,7 @@ class UserDB:
 
         async with get_session_async() as session:
             try:
+                await session.begin()
                 await session.execute(user)
                 await session.commit()
                 await session.refresh(user)

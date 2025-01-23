@@ -3,6 +3,7 @@ from enum import Enum
 
 class RoleEnum(str, Enum):
     ADMIN = "admin"
+    MODERATOR = "moderator"
     USER = "user"
 
 class StatusEnum(str, Enum):

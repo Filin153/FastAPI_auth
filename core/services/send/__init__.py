@@ -1,1 +1,2 @@
-from .mail import Mail
+from .rabbitmq import send_msg
+from .schemas import CreateMessage

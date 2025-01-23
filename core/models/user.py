@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import Union
 
 from sqlalchemy import Enum, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column, with_loader_criteria
 
 from core.database.database import Base
 from core.enums import RoleEnum, StatusEnum
@@ -26,3 +27,13 @@ class UserModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     update_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     delete_at: Mapped[Union[datetime, None]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @staticmethod
+    def include_only_active(session: AsyncSession):
+        """
+        Устанавливает фильтр на все запросы, исключая записи с delete_at IS NOT NULL.
+        """
+        session = session.execution_options(
+            loader_criteria=with_loader_criteria(UserModel, UserModel.delete_at.is_(None))
+        )
+        return session

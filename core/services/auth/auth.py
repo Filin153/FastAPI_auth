@@ -3,11 +3,13 @@ import os
 from datetime import timedelta
 from threading import Lock
 
-from authx import AuthXConfig, AuthX, RequestToken  # Предполагается, что этот класс определён в пакете authx
+from authx import AuthXConfig, AuthX, RequestToken, \
+    TokenPayload  # Предполагается, что этот класс определён в пакете authx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Response, Request
 from fastapi.responses import JSONResponse
 
+from core.enums import StatusEnum
 from core.schemas.user import UserAuthData, UserSchemas, UserCreate
 from core.services.auth.totp import TOTPService
 from core.services.password import Hash
@@ -160,7 +162,7 @@ class Auth(TOTPService):
         return Depends(wrapper)
 
     def auth_user(self, allowed_roles: list[str] = ["*"]):
-        async def wrapper(request: Request):
+        async def wrapper(request: Request) -> TokenPayload | JSONResponse:
             token: RequestToken = await self.auth._get_token_from_request(
                 request,
                 None,  # Explicitly passing None for locations
@@ -191,12 +193,14 @@ class Auth(TOTPService):
     async def verify_user_and_create_token(self, user: UserSchemas, user_auth_data: UserAuthData, response: Response):
         if user is None:
             return JSONResponse({"message": "User does not exist"}, 404)
+        elif user.status in (StatusEnum.INACTIVE, StatusEnum.BANNED):
+            return JSONResponse({"message": "User banned or inactive"}, 409)
         elif not Hash.verify_password(user_auth_data.password, user.password):
             return JSONResponse({"message": "Invalid password"}, 403)
-
-        totp_res = await self.verify_totp(user.totp_secret, user_auth_data.totp_code)
-        if not totp_res:
-            return JSONResponse({"message": "Invalid totp code"}, 403)
+        elif user.totp_secret:
+            totp_res = await self.verify_totp(user.totp_secret, user_auth_data.totp_code)
+            if not totp_res:
+                return JSONResponse({"message": "Invalid totp code"}, 403)
 
         access_token = self.auth.create_access_token(uid=str(user.id), role=user.role)
         refresh_token = self.auth.create_refresh_token(uid=str(user.id))

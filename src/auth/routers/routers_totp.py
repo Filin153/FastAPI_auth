@@ -25,3 +25,5 @@ async def totp(request: Request, email: EmailStr | None = None):
         token_payload: TokenPayload = await auth.auth_user()(request)
         user = await user_db.get({"id": int(token_payload.sub)})
         return await auth.send_totp_code(user)
+
+# TODO Add router for activate TOTP

@@ -1,15 +1,16 @@
 from authx import TokenPayload
-from fastapi import APIRouter, Depends  # Импорт необходимых классов FastAPI
+from fastapi import APIRouter, Depends, Header  # Импорт необходимых классов FastAPI
 from fastapi_limiter.depends import RateLimiter
+from fastapi.responses import JSONResponse
 
 from core.database.user import UserDB
 from core.enums import StatusEnum
 from core.schemas.user import UserCreate, UserUpdate
 from core.schemas.user import UserSchemas
 from core.services.auth.auth import Auth
+from core.services.fernet import FernetService
 from core.services.send.rabbitmq import add_new_msg_task
 from core.services.send.schemas import CreateMessage, TypeEnum
-from core.services.fernet import FernetService
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(
@@ -20,20 +21,23 @@ user_db = UserDB()
 auth = Auth()
 fernet = FernetService()
 
+
 @router.post("/", dependencies=[Depends(RateLimiter(times=10, seconds=60))])
 async def create_user(user: UserCreate):
     user.satus = StatusEnum.INACTIVE
     await user_db.create(user)
+    activate_user_key = str(await fernet.encrypt_data(user.email))
     msg = CreateMessage(
         **{
             "title": "Подтверждение почты",
-            "message": f"Подтвердить почту - http://localhost:1112/api/v1/users/activate/{str(await fernet.encrypt_data(user.email))}",
+            "message": f"Подтвердить почту - http://localhost:1112/api/v1/users/activate/{activate_user_key}",
             "send_to": user.email,
             "type": TypeEnum.info,
         }
     )
     await add_new_msg_task(msg)
     return {"message": "User created"}
+
 
 @router.get("/activate/{email_key}", dependencies=[Depends(RateLimiter(times=10, seconds=60))])
 async def activate_user(email_key: str):
@@ -49,8 +53,16 @@ async def activate_user(email_key: str):
     else:
         return {"message": "User already activated"}
 
-# TODO Delete user
-# TODO First admin user
+
+@router.delete("/")
+async def delete_user(totp_code: str = Header(), pyload_token: TokenPayload = auth.auth_user()):
+    user = await user_db.get({"id": int(pyload_token.sub)})
+    if not auth.verify_totp(user.totp_secret, totp_code):
+        return JSONResponse({"message": "Invalid TOTP"}, 403)
+    await user_db.soft_delete(user.id)
+
+
+
 # TODO Edit user status
 # TODO Edit user role
 
