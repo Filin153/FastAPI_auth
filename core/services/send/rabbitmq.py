@@ -1,20 +1,18 @@
 import json
-import os
 
 import pika
-from dotenv import load_dotenv
 
+from core.config import settings
 from .mail import Mail
 from .schemas import CreateMessage
 
-load_dotenv()
-
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq', port=5672))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host=settings.RABITMQ_HOST,
+                                                               port=settings.RABITMQ_PORT))
 channel = connection.channel()
 channel.queue_declare(queue='msg', arguments={'x-max-priority': 2})
 
-email = Mail(os.getenv("SMTP_SERVER"), int(os.getenv("SMTP_PORT")), os.getenv("SMTP_USERNAME"),
-             os.getenv("SMTP_PASSWORD"), True)
+email = Mail(settings.smtp_server, settings.smtp_port, settings.smtp_username,
+             settings.smtp_password, True)
 
 
 async def send_msg():

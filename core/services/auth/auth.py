@@ -1,25 +1,21 @@
-import logging
-import os
 from datetime import timedelta
 from threading import Lock
 
 from authx import AuthXConfig, AuthX, RequestToken, \
     TokenPayload  # Предполагается, что этот класс определён в пакете authx
-from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Response, Request
 from fastapi.responses import JSONResponse
 
+from core.config import settings
 from core.enums import StatusEnum
-from core.schemas.user import UserAuthData, UserSchemas, UserCreate
+from core.schemas.user import UserAuthData, UserSchemas
 from core.services.auth.totp import TOTPService
 from core.services.password import Hash
 
-load_dotenv()
 
-
-class Auth(TOTPService):
+class Auth(TOTPService, Hash):
     AUTH_CONFIG = AuthXConfig(
-        JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY"),
+        JWT_SECRET_KEY=settings.JWT_SECRET_KEY,
 
         # Access и Refresh Token таймауты и криптографические настройки
         JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=15),
@@ -195,7 +191,7 @@ class Auth(TOTPService):
             return JSONResponse({"message": "User does not exist"}, 404)
         elif user.status in (StatusEnum.INACTIVE, StatusEnum.BANNED):
             return JSONResponse({"message": "User banned or inactive"}, 409)
-        elif not Hash.verify_password(user_auth_data.password, user.password):
+        elif not await self.verify_password(user_auth_data.password, user.password):
             return JSONResponse({"message": "Invalid password"}, 403)
         elif user.totp_secret:
             totp_res = await self.verify_totp(user.totp_secret, user_auth_data.totp_code)

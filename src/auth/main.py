@@ -7,7 +7,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from core.services.auth import Auth
 from middleware import process_time_middleware, ErrorMiddleware
 from routers import api_router
-from config import settings
+from core.config import settings
 from core.services.send.rabbitmq import close_rabbitmq
 
 app = FastAPI()

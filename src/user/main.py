@@ -4,7 +4,7 @@ from fastapi_limiter import FastAPILimiter
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
-from config import settings
+from core.config import settings
 from middleware import process_time_middleware, ErrorMiddleware
 from routers import api_router
 from services.first_admin import FirstAdmin

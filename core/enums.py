@@ -14,3 +14,7 @@ class StatusEnum(str, Enum):
 class TotpKeyType(str, Enum):
     base32 = "base32"
     hex = "hex"
+
+class QrTypeSaveEnum(str, Enum):
+    SVG = "svg"
+    BYTES = "bytes"

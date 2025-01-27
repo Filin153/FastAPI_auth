@@ -1,13 +1,10 @@
-import os
-
 from cryptography.fernet import Fernet
-from dotenv import load_dotenv
 
-load_dotenv()
+from core.config import settings
 
 
 class FernetService:
-    __FERNET_KEY = os.getenv("FERNET_KEY").encode()
+    __FERNET_KEY = settings.FERNET_KEY.encode()
 
     def __init__(self):
         self.__fernet = Fernet(self.__FERNET_KEY)
@@ -17,4 +14,3 @@ class FernetService:
 
     async def decrypt_data(self, data: bytes | str) -> str:
         return self.__fernet.decrypt(data).decode()
-
