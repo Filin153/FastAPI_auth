@@ -16,7 +16,6 @@ class UserDB:
             if user is None:
                 return None
 
-        user.password = ""
         return UserSchemas.model_validate(user, from_attributes=True)
 
     async def get_all(self, filters: dict, limit: int = 100, offset: int = 0, with_password: bool = False) -> list[UserSchemas]:

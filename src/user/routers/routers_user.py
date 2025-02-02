@@ -102,4 +102,6 @@ async def delete_user(totp_code: str = Header(), pyload_token: TokenPayload = au
 
 @router.get('/profile')
 async def get_profile(payload: TokenPayload = auth.auth_user()) -> UserSchemas:
-    return await user_db.get({"id": int(payload.sub)})
+    user = await user_db.get({"id": int(payload.sub)})
+    user.password = ""
+    return user

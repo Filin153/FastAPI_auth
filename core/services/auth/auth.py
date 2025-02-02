@@ -194,6 +194,8 @@ class Auth(TOTPService, Hash):
         elif not await self.verify_password(user_auth_data.password, user.password):
             return JSONResponse({"message": "Invalid password"}, 403)
         elif user.totp_secret:
+            if user_auth_data.totp_code is None:
+                return JSONResponse({"message": "Missing totp code"}, 403)
             totp_res = await self.verify_totp(user.totp_secret, user_auth_data.totp_code)
             if not totp_res:
                 return JSONResponse({"message": "Invalid totp code"}, 403)

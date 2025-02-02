@@ -23,7 +23,7 @@ class UserUpdate(BaseModel):
 class UserAuthData(BaseModel):
     email: EmailStr
     password: str
-    totp_code: str
+    totp_code: str | None = None
 
 
 class UserSchemas(UserCreate):

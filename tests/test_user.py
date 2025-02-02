@@ -3,8 +3,10 @@ import json
 
 import pytest
 
+data_for_test = {}
 
-class TestUser:
+
+class TestUserAuth:
 
     async def make_activate_user_key(self, fernet, user_data):
         activate_user_key = await fernet.encrypt_data(user_data['email'])
@@ -42,3 +44,31 @@ class TestUser:
 
         resp = session.get(f'{base_path_to_api["user"]}/activate/qw12W')
         assert resp.status_code == 500
+
+    def test_token_for_user_without_totp(self, session, base_path_to_api, user_data):
+        resp = session.post(f'{base_path_to_api["auth"]}/token')
+        assert resp.status_code != 200
+
+        resp = session.post(f'{base_path_to_api["auth"]}/token', json={
+            "email": user_data['email'],
+            "password": user_data['password'],
+        })
+        resp.raise_for_status()
+        assert resp.json()['message'] == "Token create successfully"
+        data_for_test['access_token'] = resp.json()['access_token']
+
+    def test_token_for_user_login(self, session, base_path_to_api, user_data):
+        resp = session.get(f'{base_path_to_api["auth"]}/login', cookies={
+            "access_token": data_for_test['access_token']
+        })
+        print(resp.text)
+        assert resp.json() == {"message": "Login in successfully"}
+
+
+    # def test_get_user_info(self, session, base_path_to_api, user_data):
+    #     resp = session.get(f'{base_path_to_api["user"]}/profile')
+    #     print(resp.text)
+    #     resp.raise_for_status()
+    #     resp = resp.json()
+    #     assert resp['email'] == user_data['email']
+    #     assert resp['password'] == ""
