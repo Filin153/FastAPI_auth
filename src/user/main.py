@@ -1,7 +1,8 @@
 import aioredis
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi_limiter import FastAPILimiter
-from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
 from core.config import settings
@@ -38,5 +39,14 @@ app.add_middleware(CORSMiddleware,
                    allow_credentials=True, )
 
 app.add_middleware(ErrorMiddleware)
+
+
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    # Если exc.detail уже является словарём, можно вернуть его напрямую.
+    # Если это не так, можно обернуть в нужный формат.
+    content = exc.detail if isinstance(exc.detail, dict) else {"message": exc.detail}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
 
 app.include_router(api_router, prefix="/api/v1")

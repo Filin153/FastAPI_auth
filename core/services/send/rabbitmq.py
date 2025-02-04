@@ -35,8 +35,5 @@ async def add_new_msg_task(create_message: CreateMessage):
         channel.basic_publish(exchange='', routing_key='msg', body=create_message.json(),
                               properties=pika.BasicProperties(priority=0))
 
-    print("Add new msg")
-
-
 async def close_rabbitmq():
     connection.close()

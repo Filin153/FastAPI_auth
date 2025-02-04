@@ -1,6 +1,6 @@
 from datetime import timedelta
 from threading import Lock
-
+from fastapi import HTTPException
 from authx import AuthXConfig, AuthX, RequestToken, \
     TokenPayload  # Предполагается, что этот класс определён в пакете authx
 from fastapi import FastAPI, Depends, Response, Request
@@ -41,7 +41,7 @@ class Auth(TOTPService, Hash):
         JWT_HEADER_TYPE="Bearer",
 
         # Опции для cookies (access token)
-        JWT_ACCESS_COOKIE_NAME="access_token_cookie",
+        JWT_ACCESS_COOKIE_NAME="access_token",
         JWT_ACCESS_COOKIE_PATH="/",
         JWT_COOKIE_CSRF_PROTECT=True,
         JWT_COOKIE_DOMAIN=None,
@@ -50,7 +50,7 @@ class Auth(TOTPService, Hash):
         JWT_COOKIE_SECURE=True,
 
         # Опции для cookies (refresh token)
-        JWT_REFRESH_COOKIE_NAME="refresh_token_cookie",
+        JWT_REFRESH_COOKIE_NAME="refresh_token",
         JWT_REFRESH_COOKIE_PATH="/",
         JWT_SESSION_COOKIE=True,
 
@@ -145,6 +145,9 @@ class Auth(TOTPService, Hash):
     def refresh_token(self):
         async def wrapper(request: Request, response: Response,
                           token: RequestToken = Depends(self.auth.get_token_from_request(type="refresh"))):
+            if "X-CSRF-TOKEN" not in request.headers:
+                raise HTTPException(400, {"message": "Missing X-CSRF-TOKEN"})
+
             if token.location == "cookies":
                 token = await self.__set_csrf_to_token(request, token)
                 token_payload = self.auth.verify_token(token=token)
@@ -159,6 +162,12 @@ class Auth(TOTPService, Hash):
 
     def auth_user(self, allowed_roles: list[str] = ["*"]):
         async def wrapper(request: Request) -> TokenPayload | JSONResponse:
+            if "X-CSRF-TOKEN" not in request.headers:
+                raise HTTPException(400, {"message": "Missing X-CSRF-TOKEN"})
+            elif self.auth.config.JWT_ACCESS_CSRF_COOKIE_NAME not in request.cookies:
+                raise HTTPException(400, {"message": "Missing csrf_access_token"})
+
+
             token: RequestToken = await self.auth._get_token_from_request(
                 request,
                 None,  # Explicitly passing None for locations
@@ -167,7 +176,7 @@ class Auth(TOTPService, Hash):
             )
 
             if not token:
-                raise ValueError(self.auth.MSG_MissingTokenError)
+                raise HTTPException(400, {"message": self.auth.MSG_MissingTokenError})
 
             if token.location == "cookies":
                 token = await self.__set_csrf_to_token(request, token)
@@ -181,7 +190,7 @@ class Auth(TOTPService, Hash):
             # Извлекаем роль пользователя
             user_role = token_payload.get("role")
             if user_role not in allowed_roles:
-                return JSONResponse({"message": "Permissions denied"}, 403)
+                raise HTTPException(403, {"message": "Permissions denied"})
             return token_payload  # payload можно вернуть для дальнейшего использования в эндпоинте
 
         return Depends(wrapper)

@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 import pytest
 
@@ -57,13 +56,27 @@ class TestUserAuth:
         assert resp.json()['message'] == "Token create successfully"
         data_for_test['access_token'] = resp.json()['access_token']
 
-    def test_token_for_user_login(self, session, base_path_to_api, user_data):
-        resp = session.get(f'{base_path_to_api["auth"]}/login', cookies={
-            "access_token": data_for_test['access_token']
+    def test_user_login(self, session, base_path_to_api, user_data):
+        resp = session.get(f'{base_path_to_api["auth"]}/login', headers={
+            "X-CSRF-TOKEN": session.cookies['csrf_access_token']
+        }, cookies={
+            "access_token": session.cookies.get('access_token'),
+            "csrf_access_token": session.cookies.get('csrf_access_token')
         })
-        print(resp.text)
         assert resp.json() == {"message": "Login in successfully"}
+        assert resp.status_code == 200
 
+        resp = session.get(f'{base_path_to_api["auth"]}/login', headers={
+            "X-CSRF-TOKEN": session.cookies['csrf_access_token']
+        }, cookies={
+            "access_token": session.cookies.get('access_token'),
+        })
+        assert resp.json() == {"message": "Missing csrf_access_token"}
+        assert resp.status_code == 400
+
+        resp = session.get(f'{base_path_to_api["auth"]}/login')
+        assert resp.json() == {"message": "Missing X-CSRF-TOKEN"}
+        assert resp.status_code == 400
 
     # def test_get_user_info(self, session, base_path_to_api, user_data):
     #     resp = session.get(f'{base_path_to_api["user"]}/profile')

@@ -42,9 +42,7 @@ async def create_user(user: UserCreate):
 @router.get("/activate/{email_key}", dependencies=[Depends(RateLimiter(times=10, seconds=60))])
 async def activate_user(email_key: str):
     email = await fernet.decrypt_data(email_key.encode())
-    print(email)
     user = await user_db.get({"email": email})
-    print(user)
     if not user:
         return JSONResponse({"message": "User does not exist"}, 404)
     elif user.status == StatusEnum.INACTIVE:
