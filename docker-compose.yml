@@ -3,10 +3,13 @@ version: "3"
 services:
   auth:
     build: ./src/auth/.
-    container_name: auth_auth
+    container_name: auth_app
     restart: always
     networks:
       - app
+    depends_on:
+      - rabbitmq
+      - redis
     volumes:
       - ./.env:/app/.env
       - ./core:/app/core
@@ -15,15 +18,32 @@ services:
 
   user:
     build: ./src/user/.
-    container_name: user_auth
+    container_name: user_auth_app
     restart: always
     networks:
       - app
+    depends_on:
+      - rabbitmq
+      - redis
     volumes:
       - ./.env:/app/.env
       - ./core:/app/core
     ports:
       - 1112:1112
+
+  msg_worker:
+    build: ./src/msg_worker/.
+    container_name: msg_worker
+    restart: always
+#    ports:
+#      - 8082:8081
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./.env:/app/.env
+      - ./core/:/app/core
+    networks:
+      - app
 
   alembic:
     build: ./src/alembic/.
@@ -61,9 +81,31 @@ services:
     ports:
       - 8988:8080
 
+  redis:
+    image: redis
+    restart: always
+    networks:
+      - app
+#    ports:
+#      - '6379:6379'
+#    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    volumes:
+      - redis:/data
+
+  rabbitmq:
+    image: rabbitmq:4
+    container_name: rabbitmq
+    restart: always
+    #    ports:
+    #      - 8080:5672
+    networks:
+      - app
+
 networks:
   app:
     driver: bridge
 
 volumes:
   pg-data:
+  redis:
+    driver: local
