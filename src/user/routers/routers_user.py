@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi_limiter.depends import RateLimiter
 
 from core.database.user import UserDB
-from core.enums import StatusEnum
+from core.enums import StatusEnum, RoleEnum
 from core.schemas.user import UserCreate, UserSchemas, UserUpdate
 from core.services.auth.auth import Auth
 from core.services.fernet import FernetService
@@ -94,8 +94,23 @@ async def delete_user(totp_code: str = Header(), pyload_token: TokenPayload = au
     await user_db.soft_delete(user.id)
 
 
-# TODO Edit user status
-# TODO Edit user role
+@router.patch("/")
+async def update_user(user_update: UserUpdate, user: TokenPayload = auth.auth_user()):
+    user_role = user.get("role")
+    if user_role not in (RoleEnum.ADMIN, RoleEnum.MODERATOR):
+        return JSONResponse({"message": "Only Admin or Moderator can update users"}, 409)
+    elif user_update.role and user_role != RoleEnum.ADMIN:
+        return JSONResponse({"message": "Only Admin can update users role"}, 409)
+
+    return await user_db.update(user_update)
+
+
+@router.patch("/myself")
+async def update_user_myself(user_update: UserUpdate, user: TokenPayload = auth.auth_user()):
+    user_update.role = None
+    user_update.status = None
+    user_update.id = user.id
+    return await user_db.update(user_update)
 
 
 @router.get('/profile')

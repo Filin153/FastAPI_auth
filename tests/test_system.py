@@ -74,14 +74,20 @@ class TestUserAuth:
         assert resp.json() == {"message": "Missing csrf_access_token"}
         assert resp.status_code == 400
 
-        resp = session.get(f'{base_path_to_api["auth"]}/login')
+        resp = session.get(f'{base_path_to_api["auth"]}/login', cookies={
+            "access_token": session.cookies.get('access_token'),
+        })
         assert resp.json() == {"message": "Missing X-CSRF-TOKEN"}
         assert resp.status_code == 400
 
-    # def test_get_user_info(self, session, base_path_to_api, user_data):
-    #     resp = session.get(f'{base_path_to_api["user"]}/profile')
-    #     print(resp.text)
-    #     resp.raise_for_status()
-    #     resp = resp.json()
-    #     assert resp['email'] == user_data['email']
-    #     assert resp['password'] == ""
+    def test_get_user_info(self, session, base_path_to_api, user_data):
+        resp = session.get(f'{base_path_to_api["user"]}/profile', headers={
+            "X-CSRF-TOKEN": session.cookies['csrf_access_token']
+        }, cookies={
+            "access_token": session.cookies.get('access_token'),
+            "csrf_access_token": session.cookies.get('csrf_access_token')
+        })
+        resp.raise_for_status()
+        resp = resp.json()
+        assert resp['email'] == user_data['email']
+        assert resp['password'] == ""

@@ -12,7 +12,7 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    id: int
+    id: int | None = None
     email: EmailStr | None = None
     password: str | None = None
     totp_secret: bytes | None = None
