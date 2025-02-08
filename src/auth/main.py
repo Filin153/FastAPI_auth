@@ -9,7 +9,7 @@ from core.services.auth import Auth
 from middleware import process_time_middleware, ErrorMiddleware
 from routers import api_router
 from core.config import settings
-from core.services.send.rabbitmq import close_rabbitmq
+from core.services.send.mail import Mail
 
 app = FastAPI()
 
@@ -24,7 +24,7 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await FastAPILimiter.close()
-    await close_rabbitmq()
+    await Mail().close_rabbitmq()
 
 @app.middleware('http')
 async def process_time(request: Request, call_next):

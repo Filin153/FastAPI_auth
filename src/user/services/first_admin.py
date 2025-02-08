@@ -3,12 +3,12 @@ from core.database.user import UserDB
 from core.enums import RoleEnum, StatusEnum
 from core.schemas.user import UserCreate, UserUpdate
 from core.services.password import Hash
-from core.services.send import add_new_msg_task, CreateMessage
-from core.services.send.schemas import TypeEnum
+from core.services.send.mail import Mail, CreateMessage, TypeEnum
 
 
 class FirstAdmin:
     def __init__(self):
+        self.mail = Mail()
         self.__email = settings.ADMIN_EMAIL
         self.__password = settings.ADMIN_PASSWORD
         self.user_db = UserDB()
@@ -22,7 +22,7 @@ class FirstAdmin:
                 "role": RoleEnum.ADMIN,
                 "status": StatusEnum.ACTIVE,
             }))
-            await add_new_msg_task(CreateMessage(**{
+            await self.mail.send_msg(CreateMessage(**{
                 "title": "Акаунт админа создан",
                 "message": "Акаунт админа создан!",
                 "send_to": self.__email,
@@ -37,7 +37,7 @@ class FirstAdmin:
                 }, exclude_unset=True))
 
             if old_admin.email != self.__email:
-                await add_new_msg_task(CreateMessage(**{
+                await self.mail.send_msg(CreateMessage(**{
                     "title": "Смена почты админа",
                     "message": f"Почта админа изменена на -> {self.__email}",
                     "send_to": old_admin.email,
@@ -47,7 +47,7 @@ class FirstAdmin:
                     "id": old_admin.id,
                     "email": self.__email
                 }, exclude_unset=True))
-                await add_new_msg_task(CreateMessage(**{
+                await self.mail.send_msg(CreateMessage(**{
                     "title": "Акаунт админа перенесен",
                     "message": f"Акаунт админа перенесен на почту -> {self.__email}",
                     "send_to": self.__email,

@@ -1,9 +1,10 @@
-from core.services.send.rabbitmq import send_msg
+from core.services.send.mail import Mail
 import asyncio
 
 def main():
-    while True:
-        asyncio.run(send_msg())
+    mail = Mail()
+    asyncio.run(mail._worker())
+
 
 if __name__ == '__main__':
     try:

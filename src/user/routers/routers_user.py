@@ -8,8 +8,7 @@ from core.enums import StatusEnum, RoleEnum
 from core.schemas.user import UserCreate, UserSchemas, UserUpdate
 from core.services.auth.auth import Auth
 from core.services.fernet import FernetService
-from core.services.send.rabbitmq import add_new_msg_task
-from core.services.send.schemas import CreateMessage, TypeEnum
+from core.services.send.mail import Mail, CreateMessage, TypeEnum
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(
@@ -19,6 +18,7 @@ router = APIRouter(
 user_db = UserDB()
 auth = Auth()
 fernet = FernetService()
+mail = Mail()
 
 
 @router.post("/", dependencies=[Depends(RateLimiter(times=10, seconds=60))])
@@ -35,7 +35,7 @@ async def create_user(user: UserCreate):
             "type": TypeEnum.info,
         }
     )
-    await add_new_msg_task(msg)
+    await mail.send_msg(msg)
     return {"message": "User created"}
 
 

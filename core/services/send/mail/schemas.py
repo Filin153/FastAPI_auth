@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class TypeEnum(str, Enum):
@@ -11,5 +11,5 @@ class TypeEnum(str, Enum):
 class CreateMessage(BaseModel):
     title: str
     message: str
-    send_to: str
+    send_to: EmailStr
     type: TypeEnum

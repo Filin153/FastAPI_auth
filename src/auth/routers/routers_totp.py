@@ -1,4 +1,4 @@
-from typing import io
+import io
 
 from authx import TokenPayload
 from fastapi import APIRouter, Depends, HTTPException  # Импорт необходимых классов FastAPI
