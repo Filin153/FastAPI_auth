@@ -1,7 +1,7 @@
 import pytest
 from requests import Session
 
-from core.services.fernet import FernetService
+from common.services.fernet import FernetService
 
 test_session = Session()
 

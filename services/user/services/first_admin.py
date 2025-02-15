@@ -1,9 +1,9 @@
-from core.config import settings
-from core.enums import RoleEnum, StatusEnum
-from core.interfaces.user import UserInterface
-from core.schemas.user import UserCreate, UserUpdate, UserFilters
-from core.services.password import Hash
-from core.services.send.mail import Mail, CreateMessage, TypeEnum
+from common.config import settings
+from common.enums import RoleEnum, StatusEnum
+from common.interfaces.user import UserInterface
+from common.schemas.user import UserCreate, UserUpdate, UserFilters
+from common.services.password import Hash
+from common.services.send.mail import Mail, CreateMessage, TypeEnum
 
 
 class FirstAdmin:

@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet
 
-from core.config import settings
+from common.config import settings
 
 
 class FernetService:

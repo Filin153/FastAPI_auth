@@ -2,7 +2,8 @@ from typing import Optional, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.schemas.user import UserCreate, UserSchemas, UserUpdate, UserFilters
+from common.schemas.user import UserCreate, UserSchemas, UserUpdate, UserFilters
+from common.services.password import Hash
 from database.interface import BaseDBInterface
 from database.models.user import UserModel
 
@@ -15,10 +16,11 @@ class UserInterface(BaseDBInterface):
                          UserUpdate,
                          UserFilters)
 
-    async def get_from_database(self, filters: UserFilters, session: Optional[AsyncSession] = None):
+    async def get_from_database(self, filters: UserFilters, with_password: bool = False, session: Optional[AsyncSession] = None):
         user: UserSchemas = await self._get(filters=filters,
                                             session=session)
-        user.password = ""
+        if not with_password:
+            user.password = ""
         return user
 
     async def get_all_from_database(self, filters: UserFilters = None, limit: int = 10, offset: int = 0, with_password: bool = False,
@@ -47,5 +49,6 @@ class UserInterface(BaseDBInterface):
                                   session=session)
 
     async def create_in_database(self, create_object: UserCreate, session: Optional[AsyncSession] = None):
+        create_object.password = await Hash.get_password_hash(create_object.password)
         return await self._create(create_object=create_object,
                                   session=session)

@@ -2,9 +2,9 @@ from authx import TokenPayload
 from fastapi import APIRouter, Depends, Response  # Импорт необходимых классов FastAPI
 from fastapi_limiter.depends import RateLimiter
 
-from core.interfaces.user import UserInterface
-from core.schemas.user import UserAuthData, UserFilters
-from core.services.auth.auth import Auth
+from common.interfaces.user import UserInterface
+from common.schemas.user import UserAuthData, UserFilters
+from common.services.auth.auth import Auth
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(
@@ -17,7 +17,7 @@ auth = Auth()
 
 @router.post('/token', dependencies=[Depends(RateLimiter(times=10, seconds=60))])
 async def token(user_auth_data: UserAuthData, response: Response):
-    user = await user_interface.get_from_database(UserFilters(**{"email": user_auth_data.email}))
+    user = await user_interface.get_from_database(UserFilters(**{"email": user_auth_data.email}), with_password=True)
     return await auth.verify_user_and_create_token(user=user, user_auth_data=user_auth_data, response=response)
 
 

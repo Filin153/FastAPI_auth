@@ -3,12 +3,12 @@ from fastapi import APIRouter, Depends, Header  # Импорт необходи�
 from fastapi.responses import JSONResponse
 from fastapi_limiter.depends import RateLimiter
 
-from core.enums import StatusEnum, RoleEnum
-from core.interfaces.user import UserInterface
-from core.schemas.user import UserCreate, UserSchemas, UserUpdate, UserFilters
-from core.services.auth.auth import Auth
-from core.services.fernet import FernetService
-from core.services.send.mail import Mail, CreateMessage, TypeEnum
+from common.enums import StatusEnum, RoleEnum
+from common.interfaces.user import UserInterface
+from common.schemas.user import UserCreate, UserSchemas, UserUpdate, UserFilters
+from common.services.auth.auth import Auth
+from common.services.fernet import FernetService
+from common.services.send.mail import Mail, CreateMessage, TypeEnum
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(
@@ -42,13 +42,19 @@ async def create_user(user: UserCreate):
 @router.get("/activate/{email_key}", dependencies=[Depends(RateLimiter(times=10, seconds=60))])
 async def activate_user(email_key: str):
     email = await fernet.decrypt_data(email_key.encode())
-    user = await user_interface.get_from_database(UserFilters(**{"email": email}))
+    try:
+        user = await user_interface.get_from_database(UserFilters(**{"email": email}))
+    except AttributeError:
+        return JSONResponse({"message": "User does not exist"}, 404)
+    except Exception as e:
+        raise e
+
     if not user:
         return JSONResponse({"message": "User does not exist"}, 404)
     elif user.status == StatusEnum.INACTIVE:
         await user_interface.update_in_database(UserUpdate(**{
             "status": StatusEnum.ACTIVE
-        }, sub=user.id, exclude_unset=True))
+        }), sub=user.id)
         return {"message": "User activated"}
     else:
         return JSONResponse({"message": "User already activated"}, 400)

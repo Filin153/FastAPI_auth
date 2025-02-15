@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Extra
 
-from core.enums import RoleEnum, StatusEnum
+from common.enums import RoleEnum, StatusEnum
 
 
 class UserCreate(BaseModel):

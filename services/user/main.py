@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi_limiter import FastAPILimiter
 from starlette.middleware.gzip import GZipMiddleware
 
-from core.config import settings
+from common.config import settings
 from middleware import process_time_middleware, ErrorMiddleware
 from routers import api_router
 from services.first_admin import FirstAdmin
@@ -15,7 +15,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
-    await FirstAdmin().init()
+    # await FirstAdmin().init()
     redis = await aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/12", encoding="utf8",
                                     decode_responses=True)
     await FastAPILimiter.init(redis)

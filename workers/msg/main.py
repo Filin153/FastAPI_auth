@@ -1,4 +1,4 @@
-from core.services.send.mail import Mail
+from common.services.send.mail import Mail
 import asyncio
 
 def main():

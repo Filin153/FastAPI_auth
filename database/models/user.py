@@ -4,7 +4,7 @@ from typing import Union
 from sqlalchemy import Enum, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.enums import RoleEnum, StatusEnum
+from common.enums import RoleEnum, StatusEnum
 from database.database import Base
 
 

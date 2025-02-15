@@ -28,43 +28,52 @@ class BaseDBInterface:
 
     async def __query(self, session: AsyncSession, query: Any = None,
                       commit: bool = False, flush: bool = False, begin: bool = False,
-                      add_object: _create_schemas = None) -> Any:
+                      add_object: _db_model = None) -> Any:
         try:
             if begin:
                 await session.begin()
             if add_object:
-                session.add(self._db_model)
+                session.add(add_object)
                 await session.commit()
                 await session.refresh(add_object)
+                return True
             else:
                 res = await session.execute(query)
                 if commit:
                     await session.commit()
                 if flush:
                     await session.flush()
+                return res
         except Exception as e:
-            raise e
-        finally:
             await session.rollback()
-
-        return res
+            raise e
 
     async def __do_query(self, session: AsyncSession, query: Any = None,
                          commit: bool = False, flush: bool = False, begin: bool = False,
-                         add_object: _create_schemas = None) -> Any:
+                         add_object: _db_model = None) -> Any:
         if session:
-            res = await self.__query(query, session, commit, flush, begin, add_object)
-        else:
+            res = await self.__query(session, query, commit, flush, begin, add_object)
+            return res
+        elif not session and (type(query) != type(select)):
             async with EnginSession.get_async() as session:
-                res = await self.__query(query, session, commit, flush, begin, add_object)
-        return res
+                res = await self.__query(session, query, commit, flush, begin, add_object)
+                return res
+        else:
+            return None
 
     async def _get(self, filters: _filters_schemas, session: Optional[AsyncSession] = None) -> Optional[_base_schemas]:
         filters = filters.dict(exclude_unset=True)
         query = select(self._db_model).filter_by(**filters)
+
         res = await self.__do_query(session, query)
-        response_object = res.scalars().one_or_none()
-        if response_object is None:
+        if not res:
+            async with EnginSession.get_async() as session:
+                res = await self.__query(session, query)
+                response_object = res.scalars().one_or_none()
+        else:
+            response_object = res.scalars().one_or_none()
+
+        if not response_object:
             return None
         return self._base_schemas.model_validate(response_object, from_attributes=True)
 
@@ -77,20 +86,28 @@ class BaseDBInterface:
             query = query.filter_by(**filters)
 
         res = await self.__do_query(session, query)
-        response_object = res.scalars().all()
-        if response_object is None:
+        if not res:
+            async with EnginSession.get_async() as session:
+                res = await self.__query(session, query)
+                response_object = res.scalars().all()
+        else:
+            response_object = res.scalars().all()
+
+        if not response_object:
             return []
         return [self._base_schemas.model_validate(resp_obj, from_attributes=True) for resp_obj in response_object]
 
     async def _delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
         model_filed = getattr(self._db_model, model_sub_name)
         query = delete(self._db_model).where(model_filed == sub)
+
         await self.__do_query(session, query, commit=True)
         return True
 
     async def _soft_delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
         model_filed = getattr(self._db_model, model_sub_name)
         query = update(self._db_model).where(model_filed == sub).values({"delete_at": func.now()})
+
         await self.__do_query(session, query, commit=True)
         return True
 

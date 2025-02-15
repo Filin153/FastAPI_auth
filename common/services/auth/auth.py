@@ -6,11 +6,11 @@ from authx import AuthXConfig, AuthX, RequestToken, \
 from fastapi import FastAPI, Depends, Response, Request
 from fastapi.responses import JSONResponse
 
-from core.config import settings
-from core.enums import StatusEnum
-from core.schemas.user import UserAuthData, UserSchemas
-from core.services.auth.totp import TOTPService
-from core.services.password import Hash
+from common.config import settings
+from common.enums import StatusEnum
+from common.schemas.user import UserAuthData, UserSchemas
+from common.services.auth.totp import TOTPService
+from common.services.password import Hash
 
 
 class Auth(TOTPService, Hash):

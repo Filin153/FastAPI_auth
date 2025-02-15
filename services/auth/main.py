@@ -5,11 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
-from core.services.auth import Auth
+from common.services.auth import Auth
 from middleware import process_time_middleware, ErrorMiddleware
 from routers import api_router
-from core.config import settings
-from core.services.send.mail import Mail
+from common.config import settings
+from common.services.send.mail import Mail
 
 app = FastAPI()
 

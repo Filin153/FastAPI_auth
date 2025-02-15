@@ -2,7 +2,7 @@ import json
 
 import pika
 
-from core.config import settings
+from common.config import settings
 from .mail import Mail
 from .schemas import CreateMessage
 

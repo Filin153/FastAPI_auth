@@ -4,10 +4,10 @@ import pyotp
 import qrcode
 import qrcode.image.svg
 
-from core.enums import TotpKeyType, QrTypeSaveEnum
-from core.schemas.user import UserSchemas
-from core.services.fernet import FernetService
-from core.services.send.mail import Mail, CreateMessage, TypeEnum
+from common.enums import TotpKeyType, QrTypeSaveEnum
+from common.schemas.user import UserSchemas
+from common.services.fernet import FernetService
+from common.services.send.mail import Mail, CreateMessage, TypeEnum
 
 
 class TOTPService(FernetService):

@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException  # Импорт необх
 from fastapi_limiter.depends import RateLimiter
 from starlette.responses import StreamingResponse, JSONResponse
 
-from core.interfaces.user import UserInterface
-from core.schemas.user import UserCreate, UserUpdate, UserFilters
-from core.services.auth.auth import Auth
+from common.interfaces.user import UserInterface
+from common.schemas.user import UserCreate, UserUpdate, UserFilters
+from common.services.auth.auth import Auth
 
 # Создание маршрутизатора для организации маршрутов
 router = APIRouter(
