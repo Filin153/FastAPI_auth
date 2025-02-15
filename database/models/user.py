@@ -4,12 +4,10 @@ from typing import Union
 from sqlalchemy import Enum, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.database.database import Base
 from core.enums import RoleEnum, StatusEnum
+from database.database import Base
 
 
-# TODO Checker for old INACTIVE user and delete they
-# TODO Make new revision
 class UserModel(Base):
     __tablename__ = 'users'
 

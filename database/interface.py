@@ -15,8 +15,10 @@ class BaseDBInterface:
     _update_schemas = None
     _filters_schemas = None
 
-    def __init__(self, db_model: DeclarativeBase, base_schemas: Union[BaseModel, Any],
-                 create_schemas: Union[BaseModel, Any], update_schemas: Union[BaseModel, Any],
+    def __init__(self, db_model: Union[DeclarativeBase, Any],
+                 base_schemas: Union[BaseModel, Any],
+                 create_schemas: Union[BaseModel, Any],
+                 update_schemas: Union[BaseModel, Any],
                  filters_schemas: Union[BaseModel, Any]):
         self._db_model = db_model
         self._base_schemas = base_schemas
@@ -57,7 +59,7 @@ class BaseDBInterface:
                 res = await self.__query(query, session, commit, flush, begin, add_object)
         return res
 
-    async def get(self, filters: _filters_schemas, session: Optional[AsyncSession] = None) -> Optional[_base_schemas]:
+    async def _get(self, filters: _filters_schemas, session: Optional[AsyncSession] = None) -> Optional[_base_schemas]:
         filters = filters.dict(exclude_unset=True)
         query = select(self._db_model).filter_by(**filters)
         res = await self.__do_query(session, query)
@@ -66,8 +68,8 @@ class BaseDBInterface:
             return None
         return self._base_schemas.model_validate(response_object, from_attributes=True)
 
-    async def get_all(self, filters: _filters_schemas = None, limit: int = 10, offset: int = 0,
-                      session: Optional[AsyncSession] = None) -> list[_base_schemas]:
+    async def _get_all(self, filters: _filters_schemas = None, limit: int = 10, offset: int = 0,
+                       session: Optional[AsyncSession] = None) -> list[_base_schemas]:
         query = select(self._db_model).offset(offset).limit(limit)
 
         if filters:
@@ -80,20 +82,20 @@ class BaseDBInterface:
             return []
         return [self._base_schemas.model_validate(resp_obj, from_attributes=True) for resp_obj in response_object]
 
-    async def delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
+    async def _delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
         model_filed = getattr(self._db_model, model_sub_name)
         query = delete(self._db_model).where(model_filed == sub)
         await self.__do_query(session, query, commit=True)
         return True
 
-    async def soft_delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
+    async def _soft_delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
         model_filed = getattr(self._db_model, model_sub_name)
         query = update(self._db_model).where(model_filed == sub).values({"delete_at": func.now()})
         await self.__do_query(session, query, commit=True)
         return True
 
-    async def update(self, update_object: _update_schemas, sub: Any, model_sub_name: str = "id",
-                     session: Optional[AsyncSession] = None) -> bool:
+    async def _update(self, update_object: _update_schemas, sub: Any, model_sub_name: str = "id",
+                      session: Optional[AsyncSession] = None) -> bool:
         true_update_object = update_object.dict(exclude_unset=True)
         model_filed = getattr(self._db_model, model_sub_name)
         query = (update(self._db_model)
@@ -103,7 +105,7 @@ class BaseDBInterface:
         await self.__do_query(session, query, commit=True, begin=True)
         return True
 
-    async def create(self, create_object: _create_schemas, session: Optional[AsyncSession] = None) -> bool:
+    async def _create(self, create_object: _create_schemas, session: Optional[AsyncSession] = None) -> bool:
         add_object = self._db_model(**create_object.dict())
         await self.__do_query(session, add_object=add_object)
         return True

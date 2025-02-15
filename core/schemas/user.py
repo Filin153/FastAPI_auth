@@ -20,6 +20,9 @@ class UserUpdate(BaseModel):
     status: StatusEnum | None = None
 
 
+class UserFilters(UserUpdate):
+    pass
+
 class UserAuthData(BaseModel):
     email: EmailStr
     password: str
