@@ -15,7 +15,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
-    # await FirstAdmin().init()
+    await FirstAdmin().init()
     redis = await aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/12", encoding="utf8",
                                     decode_responses=True)
     await FastAPILimiter.init(redis)
