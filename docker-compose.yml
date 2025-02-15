@@ -2,7 +2,7 @@ version: "3"
 
 services:
   auth:
-    build: ./src/auth/.
+    build: ./services/auth/.
     container_name: auth_app
     restart: always
     networks:
@@ -12,12 +12,13 @@ services:
       - redis
     volumes:
       - ./.env:/app/.env
-      - ./core:/app/core
+      - ./common:/app/common
+      - ./database:/app/database
     ports:
       - 1111:1111
 
   user:
-    build: ./src/user/.
+    build: ./services/user/.
     container_name: user_auth_app
     restart: always
     networks:
@@ -27,12 +28,13 @@ services:
       - redis
     volumes:
       - ./.env:/app/.env
-      - ./core:/app/core
+      - ./common:/app/common
+      - ./database:/app/database
     ports:
       - 1112:1112
 
   msg_worker:
-    build: ./src/msg_worker/.
+    build: ./workers/msg/.
     container_name: msg_worker
     restart: always
 #    ports:
@@ -41,18 +43,20 @@ services:
       - rabbitmq
     volumes:
       - ./.env:/app/.env
-      - ./core/:/app/core
+      - ./common/:/app/common
+      - ./database:/app/database
     networks:
       - app
 
   alembic:
-    build: ./src/alembic/.
+    build: ./alembic/.
     restart: on-failure
     networks:
       - app
     volumes:
       - ./.env:/app/.env
-      - ./core/:/app/core
+      - ./common/:/app/common
+      - ./database:/app/database
       - ./alembic/:/app/alembic
       - ./alembic.ini/:/app/alembic.ini
     command: alembic upgrade head
