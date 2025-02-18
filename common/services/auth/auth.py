@@ -162,12 +162,6 @@ class Auth(TOTPService, Hash):
 
     def auth_user(self, allowed_roles: list[str] = ["*"]):
         async def wrapper(request: Request) -> TokenPayload | JSONResponse:
-            if "X-CSRF-TOKEN" not in request.headers:
-                raise HTTPException(400, {"message": "Missing X-CSRF-TOKEN"})
-            elif self.auth.config.JWT_ACCESS_CSRF_COOKIE_NAME not in request.cookies:
-                raise HTTPException(400, {"message": "Missing csrf_access_token"})
-
-
             token: RequestToken = await self.auth._get_token_from_request(
                 request,
                 None,  # Explicitly passing None for locations
@@ -179,6 +173,11 @@ class Auth(TOTPService, Hash):
                 raise HTTPException(400, {"message": self.auth.MSG_MissingTokenError})
 
             if token.location == "cookies":
+                if "X-CSRF-TOKEN" not in request.headers:
+                    raise HTTPException(400, {"message": "Missing X-CSRF-TOKEN"})
+                elif self.auth.config.JWT_ACCESS_CSRF_COOKIE_NAME not in request.cookies:
+                    raise HTTPException(400, {"message": "Missing csrf_access_token"})
+
                 token = await self.__set_csrf_to_token(request, token)
                 token_payload = self.auth.verify_token(token=token)
             else:
