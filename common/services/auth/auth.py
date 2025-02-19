@@ -194,14 +194,14 @@ class Auth(TOTPService, Hash):
 
         return Depends(wrapper)
 
-    async def verify_user_and_create_token(self, user: UserSchemas, user_auth_data: UserAuthData, response: Response):
+    async def verify_user_and_create_token(self, user: UserSchemas, user_auth_data: UserAuthData, response: Response, totp: bool = True):
         if user is None:
             return JSONResponse({"message": "User does not exist"}, 404)
         elif user.status in (StatusEnum.INACTIVE, StatusEnum.BANNED):
             return JSONResponse({"message": "User banned or inactive"}, 409)
         elif not await self.verify_password(user_auth_data.password, user.password):
             return JSONResponse({"message": "Invalid password"}, 403)
-        elif user.totp_secret:
+        elif user.totp_secret and totp:
             if user_auth_data.totp_code is None:
                 return JSONResponse({"message": "Missing totp code"}, 403)
             totp_res = await self.verify_totp(user.totp_secret, user_auth_data.totp_code)
