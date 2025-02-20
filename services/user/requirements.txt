@@ -13,3 +13,4 @@ pyotp
 pika
 bcrypt
 qrcode
+gunicorn
