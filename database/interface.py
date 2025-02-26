@@ -1,7 +1,8 @@
+import asyncio
 from typing import Union, Any, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
@@ -28,14 +29,23 @@ class BaseDBInterface:
 
     async def __query(self, session: AsyncSession, query: Any = None,
                       commit: bool = False, flush: bool = False, begin: bool = False,
-                      add_object: _db_model = None) -> Any:
+                      add_object: _db_model | list[_db_model] = None) -> Any:
         try:
             if begin:
                 await session.begin()
             if add_object:
-                session.add(add_object)
+                if isinstance(add_object, list):
+                    session.add_all(add_object)
+                else:
+                    session.add(add_object)
+
                 await session.commit()
-                await session.refresh(add_object)
+
+                if isinstance(add_object, list):
+                    await asyncio.gather(*(session.refresh(obj) for obj in add_object))
+                else:
+                    await session.refresh(add_object)
+
                 return True
             else:
                 res = await session.execute(query)
@@ -78,8 +88,14 @@ class BaseDBInterface:
         return self._base_schemas.model_validate(response_object, from_attributes=True)
 
     async def _get_all(self, filters: _filters_schemas = None, limit: int = 10, offset: int = 0,
+                       no_limit: bool = False,
                        session: Optional[AsyncSession] = None) -> list[_base_schemas]:
-        query = select(self._db_model).offset(offset).limit(limit)
+
+        if no_limit:
+            query = select(self._db_model).offset(offset)
+        else:
+            query = select(self._db_model).offset(offset).limit(limit)
+
 
         if filters:
             filters = filters.dict(exclude_unset=True)
@@ -97,16 +113,34 @@ class BaseDBInterface:
             return []
         return [self._base_schemas.model_validate(resp_obj, from_attributes=True) for resp_obj in response_object]
 
-    async def _delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
-        model_filed = getattr(self._db_model, model_sub_name)
-        query = delete(self._db_model).where(model_filed == sub)
+    async def _delete(self, sub: Any = None, model_sub_name: str = "id",
+                      filters: dict = None, session: Optional[AsyncSession] = None) -> bool:
+        where_filter = []
+        if filters:
+            for key, value in filters.items():
+                model_filed = getattr(self._db_model, key)
+                where_filter.append(model_filed == value)
+        else:
+            model_filed = getattr(self._db_model, model_sub_name)
+            where_filter.append(model_filed == sub)
+
+        query = delete(self._db_model).where(and_(*where_filter))
 
         await self.__do_query(session, query, commit=True)
         return True
 
-    async def _soft_delete(self, sub: Any, model_sub_name: str = "id", session: Optional[AsyncSession] = None) -> bool:
-        model_filed = getattr(self._db_model, model_sub_name)
-        query = update(self._db_model).where(model_filed == sub).values({"delete_at": func.now()})
+    async def _soft_delete(self, sub: Any = None, model_sub_name: str = "id",
+                      filters: dict = None, session: Optional[AsyncSession] = None) -> bool:
+        where_filter = []
+        if filters:
+            for key, value in filters.items():
+                model_filed = getattr(self._db_model, key)
+                where_filter.append(model_filed == value)
+        else:
+            model_filed = getattr(self._db_model, model_sub_name)
+            where_filter.append(model_filed == sub)
+
+        query = update(self._db_model).where(and_(*where_filter)).values({"delete_at": func.now()})
 
         await self.__do_query(session, query, commit=True)
         return True
@@ -122,7 +156,12 @@ class BaseDBInterface:
         await self.__do_query(session, query, commit=True, begin=True)
         return True
 
-    async def _create(self, create_object: _create_schemas, session: Optional[AsyncSession] = None) -> bool:
-        add_object = self._db_model(**create_object.dict())
+    async def _create(self, create_object: _create_schemas | list[_create_schemas],
+                      session: Optional[AsyncSession] = None) -> bool:
+        if isinstance(create_object, list):
+            add_object = [self._db_model(**obj.dict()) for obj in create_object]
+        else:
+            add_object = self._db_model(**create_object.dict())
+
         await self.__do_query(session, add_object=add_object)
         return True

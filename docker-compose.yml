@@ -97,11 +97,15 @@ services:
       - redis:/data
 
   rabbitmq:
-    image: rabbitmq:4
+    image: rabbitmq:4-management  # Используем образ с панелью управления (Management UI)
     container_name: rabbitmq
     restart: always
-    #    ports:
-    #      - 8080:5672
+    ports:
+      - "5672:5672"    # Порт для AMQP (обмен сообщениями)
+      - "15672:15672"  # Порт для веб-интерфейса управления (Management UI)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest    # Имя пользователя по умолчанию
+      RABBITMQ_DEFAULT_PASS: guest    # Пароль пользователя по умолчанию
     networks:
       - app
 
